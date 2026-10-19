@@ -19,5 +19,6 @@
 .exercise-list p [data-delete-exercise]{grid-column:4;grid-row:1 / span 2;font-size:12px;padding:5px 7px;white-space:nowrap}
 .exercise-list p{grid-template-columns:24px minmax(0,1fr) auto auto!important}
 @media(max-width:390px){.history-row{gap:8px!important;padding:11px!important}.history-row button{padding:6px 8px}.exercise-list p{column-gap:7px!important}.exercise-list b{font-size:12px}}
+.record-group{display:grid;gap:7px;margin-bottom:16px}.record-group:last-child{margin-bottom:0}.record-group h4{margin:4px 0 1px;font-size:14px;color:#386047}.record-group .empty-state{padding:12px}
 html,body,button,input,select{touch-action:manipulation}
 .history-row{padding:12px;border:1px solid #e5eee5;border-radius:12px;margin:7px 0;background:#fff}.history-row p:before{content:'• ';color:#2f8a50}.history-row button{border:0;background:#f1f7f1;border-radius:8px;padding:6px 9px;color:#27643b}.exercise-list p{align-items:center;gap:6px}.exercise-list button{border:0;background:#f1f7f1;border-radius:8px;padding:5px 8px;color:#27643b}

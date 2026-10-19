@@ -13,7 +13,7 @@ const money = (n) => `¥${Number(n).toLocaleString('zh-CN',{maximumFractionDigit
 function calcMeal(items=state.draftFoods){return items.reduce((a,f)=>({kcal:a.kcal+f.grams*f.kcal/100,protein:a.protein+f.grams*f.protein/100,fiber:a.fiber+f.grams*f.fiber/100}),{kcal:0,protein:0,fiber:0});}
 function todayMeals(){return state.meals.filter(x=>x.date===today());}
 function todayTotals(){return todayMeals().reduce((a,m)=>({kcal:a.kcal+m.kcal,protein:a.protein+m.protein}),{kcal:0,protein:0});}
-function expensesThisMonth(){return state.expenses.filter(x=>x.date.startsWith(month()));}
+function expensesThisMonth(){return state.expenses.filter(x=>x.type!=='income'&&x.date.startsWith(month()));}
 function renderFood(){const list=$('#meal-items');list.innerHTML='';state.draftFoods.forEach((f,i)=>{const row=document.createElement('div');row.className='item-row';row.innerHTML=`<div><p>${f.name}</p><small>${fmt(f.grams*f.kcal/100)} kcal · ${fmt(f.grams*f.protein/100)} g 蛋白质</small></div><label><input class="gram-input" type="number" min="0" value="${f.grams}" data-food="${i}"> g</label>`;list.append(row);}); const t=calcMeal();$('#meal-total').textContent=`${fmt(t.kcal)} kcal · ${fmt(t.protein)} g 蛋白质 · ${fmt(t.fiber)} g 纤维`;
   $('#food-history').innerHTML=state.meals.length?state.meals.slice(0,8).map(m=>`<div class="history-row"><div><p>🍽️ ${m.name}</p><small>${m.date} · ${fmt(m.kcal)} kcal</small></div><button class="text-button" data-delete="meals:${m.id}">删除</button></div>`).join(''):'暂无饮食记录';}
 function renderHome(){const totals=todayTotals(), expenses=expensesThisMonth();$('#today-kcal').textContent=fmt(totals.kcal);$('#today-protein').textContent=fmt(totals.protein);$('#month-expense').textContent=money(expenses.reduce((a,x)=>a+x.amount,0));const worked=state.workouts.some(x=>x.date===today());$('#workout-summary').textContent=worked?'今天已完成训练':'今天还未训练'; const events=[...todayMeals().map(x=>({time:x.createdAt,text:`${x.name} · ${fmt(x.kcal)} kcal`})),...state.workouts.filter(x=>x.date===today()).map(x=>({time:x.createdAt,text:`自重循环 · ${x.rounds} 轮`}))].sort((a,b)=>b.time.localeCompare(a.time));$('#today-timeline').innerHTML=events.length?events.map(x=>`<div class="history-row"><p>${new Date(x.time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}　${x.text}</p></div>`).join(''):'今天还没有记录';}
@@ -189,3 +189,49 @@ importFile.onchange=async()=>{
   }catch{alert('\u5907\u4efd\u6587\u4ef6\u65e0\u6548\uff0c\u8bf7\u9009\u62e9\u7531\u672c\u5e94\u7528\u5bfc\u51fa\u7684 JSON \u6587\u4ef6');}
   importFile.value='';
 };
+
+function dailyBudgetStatus(){
+  const limit=Number(state.dailyExpenseLimit)||15;
+  const elapsed=Number(today().slice(8));
+  const spent=state.expenses.filter(x=>x.type!=='income'&&x.date>=`${month()}-01`&&x.date<=today()).reduce((sum,x)=>sum+Number(x.amount||0),0);
+  return {limit,spent,available:limit*elapsed-spent};
+}
+renderExpenses=()=>{
+  const currentMonth=state.expenses.filter(x=>x.date.startsWith(month()));
+  const outgoings=currentMonth.filter(x=>x.type!=='income');
+  const incomes=currentMonth.filter(x=>x.type==='income');
+  const totalOut=outgoings.reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const totalIn=incomes.reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const food=outgoings.filter(x=>x.category==='\u98df\u6750').reduce((sum,x)=>sum+Number(x.amount||0),0);
+  const outCard=$('#expense-total').closest('.stat-card');
+  outCard.querySelector('span').textContent='\u672c\u6708\u82b1\u9500';
+  $('#expense-total').textContent=money(totalOut);
+  const incomeCard=$('#food-expense').closest('.stat-card');
+  incomeCard.querySelector('span').textContent='\u672c\u6708\u6536\u5165';
+  $('#food-expense').textContent=money(totalIn);
+  incomeCard.querySelector('small').textContent='\u4e0d\u8ba1\u5165\u82b1\u9500';
+  let budgetCard=$('#daily-budget-card');
+  if(!budgetCard){
+    budgetCard=document.createElement('article');
+    budgetCard.id='daily-budget-card';
+    budgetCard.className='stat-card';
+    outCard.parentElement.append(budgetCard);
+  }
+  const budget=dailyBudgetStatus();
+  budgetCard.innerHTML=`<span>\u4eca\u65e5\u53ef\u82b1</span><strong>${money(budget.available)}</strong><small>\u6bcf\u65e5\u4e0a\u9650 ${money(budget.limit)}</small>`;
+  const cats=['\u98df\u6750','\u8865\u5242','\u5176\u4ed6'];
+  $('#expense-breakdown').innerHTML=cats.map(category=>{const amount=outgoings.filter(x=>x.category===category).reduce((sum,x)=>sum+Number(x.amount||0),0);return `<div class="breakdown-row"><span>${category}</span><div class="bar"><i style="width:${totalOut?amount/totalOut*100:0}%"></i></div><b>${money(amount)}</b></div>`}).join('');
+  let budgetSetting=$('#daily-budget-setting');
+  if(!budgetSetting){
+    budgetSetting=document.createElement('article');
+    budgetSetting.id='daily-budget-setting';
+    budgetSetting.className='card settings-card';
+    $('#expense-breakdown').closest('.card').after(budgetSetting);
+  }
+  budgetSetting.innerHTML=`<div class="section-heading"><h3>\u6bcf\u65e5\u82b1\u9500\u4e0a\u9650</h3><label class="compact-input">\u00a5 <input id="daily-limit-input" type="number" min="0" step="1" value="${budget.limit}"></label></div><p>\u4eca\u65e5\u7d2f\u8ba1\u53ef\u7528 ${money(budget.available)}\uff1b\u672a\u82b1\u5b8c\u4f1a\u7d2f\u79ef\u5230\u660e\u5929\uff0c\u8d85\u652f\u4f1a\u6263\u51cf\u540e\u7eed\u989d\u5ea6\u3002</p>`;
+  $('#daily-limit-input').onchange=e=>{state.dailyExpenseLimit=Math.max(0,Number(e.target.value)||0);save();render();};
+  const rows=(list,type,empty)=>list.length?list.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="history-row"><div><p>${x.name}</p><small>${x.date} \u00b7 ${x.category}</small></div><strong>${money(x.amount)}</strong><button class="text-button" data-delete="${type}:${x.id}">\u5220\u9664</button></div>`).join(''): `<p class="empty-state">${empty}</p>`;
+  $('#expense-history').innerHTML=`<div class="record-group"><h4>\u82b1\u9500</h4>${rows(outgoings,'expenses','\u6682\u65e0\u82b1\u9500\u8bb0\u5f55')}</div><div class="record-group"><h4>\u6536\u5165</h4>${rows(incomes,'expenses','\u6682\u65e0\u6536\u5165\u8bb0\u5f55')}</div>`;
+};
+state.dailyExpenseLimit ??= 15;
+render();
