@@ -107,4 +107,51 @@ $('#delete-meal-plan').onclick=()=>{
   state.draftFoods=next.items;
   save();render();
 };
+// Template ingredients are editable data, not completed meal records.
+$('#add-food-button').onclick=()=>dialog('\u6dfb\u52a0\u5230\u5f53\u524d\u6a21\u677f','<label class="form-field">\u98df\u6750\u540d\u79f0<input name="name" required autofocus></label><label class="form-field">\u6bcf 100g \u70ed\u91cf (kcal)<input name="kcal" type="number" min="0" required></label><label class="form-field">\u6bcf 100g \u86cb\u767d\u8d28 (g)<input name="protein" type="number" min="0" value="0" required></label><label class="form-field">\u6bcf 100g \u7ea4\u7ef4 (g)<input name="fiber" type="number" min="0" value="0" required></label><label class="form-field">\u672c\u6b21\u7528\u91cf (g)<input name="grams" type="number" min="0" value="100" required></label>',f=>{
+  state.draftFoods.push({name:f.get('name'),kcal:Number(f.get('kcal')),protein:Number(f.get('protein')),fiber:Number(f.get('fiber')),grams:Number(f.get('grams'))});
+  save();render();
+});
+$('#add-exercise-button').onclick=()=>dialog('\u6dfb\u52a0\u8bad\u7ec3\u52a8\u4f5c','<label class="form-field">\u52a8\u4f5c\u540d\u79f0<input name="name" required autofocus></label><label class="form-field">\u6b21\u6570<input name="reps" type="number" min="1" value="12" required></label>',f=>{
+  state.exercises.push({name:f.get('name'),target:`${Number(f.get('reps'))} \u6b21`});
+  save();render();
+});
+document.addEventListener('click',e=>{
+  const foodIndex=e.target.dataset.deleteFood;
+  if(foodIndex!==undefined){
+    state.draftFoods.splice(Number(foodIndex),1);
+    save();render();
+  }
+  const exerciseIndex=e.target.dataset.editExercise;
+  if(exerciseIndex!==undefined){
+    const item=state.exercises[Number(exerciseIndex)];
+    dialog('\u8bbe\u7f6e\u8bad\u7ec3\u6b21\u6570',`<label class="form-field">\u52a8\u4f5c<input value="${item.name}" disabled></label><label class="form-field">\u6b21\u6570<input name="reps" type="number" min="1" value="${(item.target.match(/\\d+/)||[''])[0]}" required></label>`,f=>{
+      item.target=`${Number(f.get('reps'))} \u6b21`;
+      save();render();
+    });
+  }
+});
+const originalScopedRecords=renderScopedRecords;
+renderScopedRecords=function(){
+  originalScopedRecords();
+  $$('#meal-items .item-row').forEach((row,index)=>{
+    if(row.querySelector('[data-delete-food]'))return;
+    const button=document.createElement('button');
+    button.className='text-button';
+    button.type='button';
+    button.textContent='\u5220\u9664';
+    button.dataset.deleteFood=index;
+    row.append(button);
+  });
+  $$('#exercise-list [data-delete-exercise]').forEach(button=>{
+    const index=button.dataset.deleteExercise;
+    if(button.parentElement.querySelector('[data-edit-exercise]'))return;
+    const edit=document.createElement('button');
+    edit.className='text-button';
+    edit.type='button';
+    edit.textContent='\u8bbe\u7f6e\u6b21\u6570';
+    edit.dataset.editExercise=index;
+    button.before(edit);
+  });
+};
 render();
