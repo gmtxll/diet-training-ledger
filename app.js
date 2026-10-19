@@ -97,7 +97,7 @@ function renderScopedRecords(){
 }
 const $$ = (s) => [...document.querySelectorAll(s)];
 render = function(){baseRender();renderScopedRecords();};
-$('#delete-meal-plan').onclick=()=>{
+document.addEventListener('click',e=>{if(e.target.id!=='delete-meal-plan')return;
   if(state.mealPlans.length<=1){alert('\u81f3\u5c11\u4fdd\u7559\u4e00\u4e2a\u996e\u98df\u65b9\u6848');return;}
   const current=state.mealPlans.find(x=>x.id===state.activeMealPlan);
   if(!confirm(`\u786e\u5b9a\u5220\u9664\u300c${current.name}\u300d\u5417\uff1f`))return;
@@ -106,7 +106,7 @@ $('#delete-meal-plan').onclick=()=>{
   state.activeMealPlan=next.id;
   state.draftFoods=next.items;
   save();render();
-};
+});
 // Template ingredients are editable data, not completed meal records.
 $('#add-food-button').onclick=()=>dialog('\u6dfb\u52a0\u5230\u5f53\u524d\u6a21\u677f','<label class="form-field">\u98df\u6750\u540d\u79f0<input name="name" required autofocus></label><label class="form-field">\u6bcf 100g \u70ed\u91cf (kcal)<input name="kcal" type="number" min="0" required></label><label class="form-field">\u6bcf 100g \u86cb\u767d\u8d28 (g)<input name="protein" type="number" min="0" value="0" required></label><label class="form-field">\u6bcf 100g \u7ea4\u7ef4 (g)<input name="fiber" type="number" min="0" value="0" required></label><label class="form-field">\u672c\u6b21\u7528\u91cf (g)<input name="grams" type="number" min="0" value="100" required></label>',f=>{
   state.draftFoods.push({name:f.get('name'),kcal:Number(f.get('kcal')),protein:Number(f.get('protein')),fiber:Number(f.get('fiber')),grams:Number(f.get('grams'))});
