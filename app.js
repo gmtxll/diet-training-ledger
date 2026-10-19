@@ -7,7 +7,7 @@ const foods = [
 const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, draftFoods:foods };
 let state = JSON.parse(localStorage.getItem('diet-training-state') || 'null') || initial;
 let timer = {seconds:0, running:false, interval:null};
-const save = () => localStorage.setItem('diet-training-state', JSON.stringify(state));
+const save = () => { localStorage.setItem('diet-training-state', JSON.stringify(state)); scheduleSync(); };
 const fmt = (n) => Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
 const money = (n) => `¥${Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2})}`;
 function calcMeal(items=state.draftFoods){return items.reduce((a,f)=>({kcal:a.kcal+f.grams*f.kcal/100,protein:a.protein+f.grams*f.protein/100,fiber:a.fiber+f.grams*f.fiber/100}),{kcal:0,protein:0,fiber:0});}
@@ -33,4 +33,14 @@ $('#add-expense-button').onclick=()=>dialog('记录花销','<label class="form-f
 function drawTimer(){const s=timer.seconds;$('#timer-display').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#timer-toggle').textContent=timer.running?'暂停':'开始';$('#timer-state').textContent=timer.running?'训练计时中':'准备开始';}
 $('#timer-toggle').onclick=()=>{timer.running=!timer.running;if(timer.running)timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);else clearInterval(timer.interval);drawTimer();};$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;drawTimer();};$('#complete-workout').onclick=()=>{const rounds=Math.max(1,Number($('#rounds-input').value)||3);state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),rounds,duration:timer.seconds});save();timer.running=false;clearInterval(timer.interval);timer.seconds=0;drawTimer();render();};
 $('#export-button').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`饮食训练本-${today()}.json`;a.click();URL.revokeObjectURL(url);};
+let syncTimer;
+function serverUrl(){return $('#server-url-input').value.trim().replace(/\/$/,'');}
+function setSyncStatus(message){$('#sync-status').textContent=message;}
+function scheduleSync(){clearTimeout(syncTimer);if(serverUrl())syncTimer=setTimeout(pushToServer,700);}
+async function pushToServer(){const url=serverUrl();if(!url)return;try{setSyncStatus('正在同步到电脑…');const response=await fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
+async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await fetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{setSyncStatus('无法连接电脑服务器');}}
+$('#server-url-input').value=localStorage.getItem('diet-training-server')||'';
+$('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server',serverUrl());setSyncStatus('地址已保存；可手动同步');};
+$('#push-server-button').onclick=pushToServer;
+$('#pull-server-button').onclick=pullFromServer;
 $('#today-label').textContent=new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');render();drawTimer();

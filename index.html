@@ -9,6 +9,7 @@
   <title>饮食训练本</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sync.css">
 </head>
 <body>
   <main class="app-shell">
@@ -42,6 +43,7 @@
       <div class="stats-grid"><article class="stat-card"><span>最新体重</span><strong id="latest-weight">—</strong><small>kg</small></article><article class="stat-card"><span>BMI</span><strong id="bmi-value">—</strong><small id="height-caption">请设置身高</small></article></div>
       <article class="card"><h3>趋势</h3><div id="weight-chart" class="weight-chart empty-state">记录体重后显示趋势</div></article>
       <article class="card settings-card"><h3>数据来源</h3><p>当前使用本地手动记录。原生 iOS 版本可在获得授权后读取 Apple 健康中的身高与体重。</p><label>身高（cm）<input id="height-input" type="number" min="80" max="250" placeholder="例如 163"></label></article>
+      <article class="card settings-card"><h3>电脑同步</h3><p id="sync-status">未连接电脑服务器</p><label>服务器地址<input id="server-url-input" type="url" placeholder="http://192.168.1.10:8787"></label><div class="button-row"><button class="secondary" id="pull-server-button">从电脑读取</button><button class="primary" id="push-server-button">同步到电脑</button></div></article>
     </section>
 
     <section id="view-expenses" class="view" aria-labelledby="expenses-title">
