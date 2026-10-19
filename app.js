@@ -52,3 +52,59 @@ $('#add-game-button').onclick=()=>dialog('添加游戏','<label class="form-fiel
 $('#meal-plan-select').onchange=e=>{state.activeMealPlan=e.target.value;state.draftFoods=state.mealPlans.find(x=>x.id===e.target.value).items;save();render();};$('#workout-plan-select').onchange=e=>{state.activeWorkoutPlan=e.target.value;state.exercises=state.workoutPlans.find(x=>x.id===e.target.value).items;save();render();};$('#add-meal-plan').onclick=()=>dialog('新建饮食方案','<label class="form-field">方案名称<input name="name" required></label>',f=>{const x={id:crypto.randomUUID(),name:f.get('name'),items:JSON.parse(JSON.stringify(state.draftFoods))};state.mealPlans.push(x);state.activeMealPlan=x.id;state.draftFoods=x.items;save();render();});$('#add-workout-plan').onclick=()=>dialog('新建训练方案','<label class="form-field">方案名称<input name="name" required></label>',f=>{const x={id:crypto.randomUUID(),name:f.get('name'),items:JSON.parse(JSON.stringify(state.exercises))};state.workoutPlans.push(x);state.activeWorkoutPlan=x.id;state.exercises=x.items;save();render();});
 $('#add-saving-button').onclick=()=>dialog('添加存钱计划','<label class="form-field">计划名称<input name="name" required></label><label class="form-field">目标金额（元）<input name="target" type="number" min="1" required></label>',f=>{state.savings.unshift({id:crypto.randomUUID(),name:f.get('name'),target:Number(f.get('target'))});save();render();});
 $('#today-label').textContent=new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');render();drawTimer();
+
+// Keep record deletion in the page where the record belongs.
+const baseRender = render;
+function renderScopedRecords(){
+  const planRow = $('#add-meal-plan').parentElement;
+  let deletePlan = $('#delete-meal-plan');
+  if(!deletePlan){
+    deletePlan=document.createElement('button');
+    deletePlan.id='delete-meal-plan';
+    deletePlan.className='text-button';
+    deletePlan.type='button';
+    deletePlan.textContent='\u5220\u9664\u65b9\u6848';
+    planRow.append(deletePlan);
+  }
+  deletePlan.disabled=state.mealPlans.length<=1;
+
+  const chart=$('#weight-chart');
+  let weightHistory=$('#weight-history');
+  if(!weightHistory){
+    const section=document.createElement('section');
+    section.className='section';
+    section.innerHTML='<h3>\u4f53\u91cd\u8bb0\u5f55</h3><div id="weight-history" class="history-list empty-state"></div>';
+    chart.closest('article').after(section);
+    weightHistory=$('#weight-history');
+  }
+  weightHistory.innerHTML=state.weights.length
+    ? [...state.weights].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<div class="history-row"><div><p>\u2696\ufe0f ${fmt(x.value)} kg</p><small>${x.date}</small></div><button class="text-button" data-delete="weights:${x.id}">\u5220\u9664</button></div>`).join('')
+    : '\u6682\u65e0\u4f53\u91cd\u8bb0\u5f55';
+
+  const expenseRows=$$('#expense-history .history-row');
+  const sortedExpenses=[...state.expenses].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
+  expenseRows.forEach((row,index)=>{
+    if(row.querySelector('[data-delete]'))return;
+    const button=document.createElement('button');
+    button.className='text-button';
+    button.type='button';
+    button.textContent='\u5220\u9664';
+    button.dataset.delete=`expenses:${sortedExpenses[index].id}`;
+    row.append(button);
+  });
+  const legacyRecords=$('#record-list')?.closest('article');
+  if(legacyRecords)legacyRecords.hidden=true;
+}
+const $$ = (s) => [...document.querySelectorAll(s)];
+render = function(){baseRender();renderScopedRecords();};
+$('#delete-meal-plan').onclick=()=>{
+  if(state.mealPlans.length<=1){alert('\u81f3\u5c11\u4fdd\u7559\u4e00\u4e2a\u996e\u98df\u65b9\u6848');return;}
+  const current=state.mealPlans.find(x=>x.id===state.activeMealPlan);
+  if(!confirm(`\u786e\u5b9a\u5220\u9664\u300c${current.name}\u300d\u5417\uff1f`))return;
+  state.mealPlans=state.mealPlans.filter(x=>x.id!==state.activeMealPlan);
+  const next=state.mealPlans[0];
+  state.activeMealPlan=next.id;
+  state.draftFoods=next.items;
+  save();render();
+};
+render();
