@@ -134,6 +134,8 @@ document.addEventListener('click',e=>{
 const originalScopedRecords=renderScopedRecords;
 renderScopedRecords=function(){
   originalScopedRecords();
+  // Food is managed as one editable list; meal-plan controls are intentionally hidden.
+  $('#meal-plan-select').parentElement.hidden=true;
   $$('#meal-items .item-row').forEach((row,index)=>{
     if(row.querySelector('[data-delete-food]'))return;
     const button=document.createElement('button');
