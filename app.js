@@ -157,3 +157,35 @@ renderScopedRecords=function(){
   });
 };
 render();
+
+// A backup can be restored after Safari site data is cleared to refresh the PWA.
+const importButton=document.createElement('button');
+importButton.className='icon-button';
+importButton.type='button';
+importButton.textContent='\u21e9';
+importButton.setAttribute('aria-label','\u5bfc\u5165\u5907\u4efd');
+const importFile=document.createElement('input');
+importFile.type='file';
+importFile.accept='application/json';
+importFile.hidden=true;
+$('#export-button').before(importButton);
+$('#export-button').after(importFile);
+importButton.onclick=()=>importFile.click();
+importFile.onchange=async()=>{
+  const file=importFile.files?.[0];
+  if(!file)return;
+  try{
+    const restored=JSON.parse(await file.text());
+    if(!restored||typeof restored!=='object'||!Array.isArray(restored.meals))throw new Error();
+    if(!confirm('\u5bfc\u5165\u4f1a\u8986\u76d6\u5f53\u524d\u672c\u673a\u8bb0\u5f55\uff0c\u662f\u5426\u7ee7\u7eed\uff1f'))return;
+    state=restored;
+    state.meals ||= []; state.workouts ||= []; state.weights ||= []; state.expenses ||= []; state.games ||= []; state.savings ||= [];
+    state.draftFoods ||= foods; state.exercises ||= []; state.mealPlans ||= [{id:'default-meal',name:'\u98df\u6750\u6e05\u5355',items:state.draftFoods}];
+    state.workoutPlans ||= [{id:'default-workout',name:'\u81ea\u91cd\u5faa\u73af',items:state.exercises}];
+    state.activeMealPlan ||= state.mealPlans[0].id; state.activeWorkoutPlan ||= state.workoutPlans[0].id;
+    localStorage.setItem('diet-training-state',JSON.stringify(state));
+    render();
+    alert('\u5907\u4efd\u5df2\u5bfc\u5165');
+  }catch{alert('\u5907\u4efd\u6587\u4ef6\u65e0\u6548\uff0c\u8bf7\u9009\u62e9\u7531\u672c\u5e94\u7528\u5bfc\u51fa\u7684 JSON \u6587\u4ef6');}
+  importFile.value='';
+};
