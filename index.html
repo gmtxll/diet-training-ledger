@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#166534">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>饮食训练本</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header"><div><p class="eyebrow" id="today-label"></p><h1>饮食训练本</h1></div><button class="icon-button" id="export-button" aria-label="导出本地数据">⇧</button></header>
+    <section id="view-home" class="view active" aria-labelledby="home-title">
+      <h2 id="home-title">今日概览</h2>
+      <div class="stats-grid">
+        <article class="stat-card"><span>热量</span><strong id="today-kcal">0</strong><small>kcal</small></article>
+        <article class="stat-card"><span>蛋白质</span><strong id="today-protein">0</strong><small>g</small></article>
+        <article class="stat-card"><span>本月花销</span><strong id="month-expense">¥0</strong><small>食材与补剂</small></article>
+      </div>
+      <article class="card action-card"><div><p class="eyebrow">下一步</p><h3 id="workout-summary">今天还未训练</h3><p>完成一次训练或添加一餐，数据会自动汇总。</p></div><button class="primary" data-go="workout">开始训练</button></article>
+      <section class="section"><div class="section-heading"><h3>今日记录</h3><button class="text-button" data-go="food">添加饮食</button></div><div id="today-timeline" class="timeline empty-state">今天还没有记录</div></section>
+    </section>
+
+    <section id="view-food" class="view" aria-labelledby="food-title">
+      <div class="section-heading"><div><p class="eyebrow">饮食</p><h2 id="food-title">记录一餐</h2></div><button class="text-button" id="add-food-button">自定义食材</button></div>
+      <article class="card"><div class="section-heading"><h3>一餐方案</h3><span class="tag">模板</span></div><div id="meal-items" class="item-list"></div><div class="meal-total"><span>当前合计</span><strong id="meal-total">0 kcal · 0 g 蛋白质</strong></div><button class="primary full" id="save-meal-button">保存到今天</button></article>
+      <section class="section"><div class="section-heading"><h3>最近饮食</h3></div><div id="food-history" class="history-list empty-state">暂无饮食记录</div></section>
+    </section>
+
+    <section id="view-workout" class="view" aria-labelledby="workout-title">
+      <div><p class="eyebrow">训练</p><h2 id="workout-title">自重循环</h2><p class="muted">深蹲、俯卧撑、平板支撑、卷腹</p></div>
+      <article class="timer-card"><p id="timer-state">准备开始</p><strong id="timer-display">00:00</strong><h3 id="exercise-name">第 1 项：深蹲</h3><p id="exercise-detail">目标 25–30 次 · 共 3 轮</p><div class="button-row"><button class="secondary" id="reset-timer">重置</button><button class="primary" id="timer-toggle">开始</button></div></article>
+      <article class="card"><div class="section-heading"><h3>训练设置</h3><label class="compact-input">轮数 <input id="rounds-input" type="number" min="1" max="8" value="3"></label></div><div class="exercise-list"><p><span>1</span> 深蹲 <b>25–30 次</b></p><p><span>2</span> 俯卧撑 <b>10–15 次</b></p><p><span>3</span> 平板支撑 <b>45–60 秒</b></p><p><span>4</span> 卷腹 <b>25–30 次</b></p></div><button class="secondary full" id="complete-workout">保存本次训练</button></article>
+      <section class="section"><h3>训练历史</h3><div id="workout-history" class="history-list empty-state">暂无训练记录</div></section>
+    </section>
+
+    <section id="view-trends" class="view" aria-labelledby="trends-title">
+      <div class="section-heading"><div><p class="eyebrow">身体数据</p><h2 id="trends-title">体重与 BMI</h2></div><button class="text-button" id="add-weight-button">记录体重</button></div>
+      <div class="stats-grid"><article class="stat-card"><span>最新体重</span><strong id="latest-weight">—</strong><small>kg</small></article><article class="stat-card"><span>BMI</span><strong id="bmi-value">—</strong><small id="height-caption">请设置身高</small></article></div>
+      <article class="card"><h3>趋势</h3><div id="weight-chart" class="weight-chart empty-state">记录体重后显示趋势</div></article>
+      <article class="card settings-card"><h3>数据来源</h3><p>当前使用本地手动记录。原生 iOS 版本可在获得授权后读取 Apple 健康中的身高与体重。</p><label>身高（cm）<input id="height-input" type="number" min="80" max="250" placeholder="例如 163"></label></article>
+    </section>
+
+    <section id="view-expenses" class="view" aria-labelledby="expenses-title">
+      <div class="section-heading"><div><p class="eyebrow">花销</p><h2 id="expenses-title">健康花销</h2></div><button class="text-button" id="add-expense-button">＋ 记一笔</button></div>
+      <div class="stats-grid"><article class="stat-card"><span>本月总额</span><strong id="expense-total">¥0</strong><small>当前月份</small></article><article class="stat-card"><span>食材</span><strong id="food-expense">¥0</strong><small>本月</small></article></div>
+      <article class="card"><h3>分类</h3><div id="expense-breakdown" class="breakdown"></div></article>
+      <section class="section"><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
+    </section>
+  </main>
+
+  <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">趋势</button><button data-view="expenses">花销</button></nav>
+  <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
+  <script src="app.js"></script>
+</body>
+</html>
