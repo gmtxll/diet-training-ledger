@@ -1,0 +1,9 @@
+{
+  "appId": "com.gmtxll.diettrainingledger",
+  "appName": "饮食训练本",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

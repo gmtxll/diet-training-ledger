@@ -7,7 +7,7 @@ const foods = [
 const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, draftFoods:foods };
 let state = JSON.parse(localStorage.getItem('diet-training-state') || 'null') || initial;
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
-const save = () => { localStorage.setItem('diet-training-state', JSON.stringify(state)); scheduleSync(); };
+const save = () => { state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
 const fmt = (n) => Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
 const money = (n) => `¥${Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2})}`;
 function calcMeal(items=state.draftFoods){return items.reduce((a,f)=>({kcal:a.kcal+f.grams*f.kcal/100,protein:a.protein+f.grams*f.protein/100,fiber:a.fiber+f.grams*f.fiber/100}),{kcal:0,protein:0,fiber:0});}
@@ -23,7 +23,19 @@ function renderWorkouts(){ $('#workout-history').innerHTML=state.workouts.length
 function render(){renderHome();renderFood();renderTrends();renderExpenses();renderWorkouts();renderExtras();}
 function dialog(title,fields,onSave){$('#dialog-title').textContent=title;$('#dialog-fields').innerHTML=fields;const d=$('#entry-dialog');d.showModal();const form=$('#entry-form');form.onsubmit=(e)=>{e.preventDefault();onSave(new FormData(form));d.close();};}
 document.addEventListener('input',(e)=>{if(e.target.matches('[data-food]')){state.draftFoods[e.target.dataset.food].grams=Math.max(0,Number(e.target.value)||0);save();const t=calcMeal();$('#meal-total').textContent=`${fmt(t.kcal)} kcal · ${fmt(t.protein)} g 蛋白质 · ${fmt(t.fiber)} g 纤维`;}});
-document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));$(`#view-${b.dataset.view}`).classList.add('active');b.classList.add('active');});document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySelector(`[data-view="${b.dataset.go}"]`).click());
+function showToast(message){
+  let toast=$('#app-toast');
+  if(!toast){toast=document.createElement('div');toast.id='app-toast';toast.className='app-toast';toast.setAttribute('role','status');document.body.append(toast);}
+  toast.textContent=message;toast.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toast.classList.remove('show'),2800);
+}
+function openView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));
+  $(`#view-${name}`).classList.add('active');
+  document.querySelector(`[data-view="${name}"]`)?.classList.add('active');
+  if(name==='workout'){scheduleSync();showToast('训练记录会自动保存并同步到电脑');}
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>openView(b.dataset.go));
 $('#dialog-close').onclick=$('#dialog-cancel').onclick=()=>$('#entry-dialog').close();
 $('#save-meal-button').onclick=()=>{const t=calcMeal();state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:'一餐方案',...t});save();render();};
 $('#add-food-button').onclick=()=>dialog('添加食材','<label class="form-field">名称<input name="name" required></label><label class="form-field">热量（kcal）<input name="kcal" type="number" min="0" required></label><label class="form-field">蛋白质（g）<input name="protein" type="number" min="0" value="0" required></label>',f=>{state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:f.get('name'),kcal:Number(f.get('kcal')),protein:Number(f.get('protein'))});save();render();});
@@ -40,9 +52,9 @@ function scheduleSync(){clearTimeout(syncTimer);if(serverUrl())syncTimer=setTime
 async function pushToServer(){const url=serverUrl();if(!url)return;try{setSyncStatus('正在同步到电脑…');const response=await fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
 async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await fetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{setSyncStatus('无法连接电脑服务器');}}
 $('#server-url-input').value=localStorage.getItem('diet-training-server')||'http://192.168.1.5:8787';
-$('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server',serverUrl());setSyncStatus('地址已保存；可手动同步');};
-$('#push-server-button').onclick=pushToServer;
-$('#pull-server-button').onclick=pullFromServer;
+$('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server',serverUrl());configureNativeAutoSync();setSyncStatus('地址已保存；Android 将在 Wi‑Fi 下自动同步');};
+$('#push-server-button')?.remove();
+$('#pull-server-button')?.remove();
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 function removeRecord(type,id){state[type]=state[type].filter(x=>x.id!==id);save();render();}
 function renderExtras(){const mp=$('#meal-plan-select'),wp=$('#workout-plan-select');if(mp)mp.innerHTML=state.mealPlans.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');if(wp)wp.innerHTML=state.workoutPlans.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');if(mp)mp.value=state.activeMealPlan;if(wp)wp.value=state.activeWorkoutPlan;const exercises=$('#exercise-list');if(exercises)exercises.innerHTML=state.exercises.map((x,i)=>`<p><span>${i+1}</span>${x.name}<b>${x.target}</b><button class="text-button" data-delete-exercise="${i}">删除</button></p>`).join('');const row=(x,type,label)=>`<div class="history-row"><div><p>${label} · ${x.name||x.date}</p><small>${x.date||''}</small></div><button class="text-button" data-delete="${type}:${x.id}">删除</button></div>`;$('#playing-games').innerHTML=state.games.filter(x=>x.status==='playing').map(x=>row(x,'games','🎮')).join('')||'暂无正在玩的游戏';$('#finished-games').innerHTML=state.games.filter(x=>x.status==='finished').map(x=>row(x,'games','✅')).join('')||'暂无已游玩游戏';const all=[...state.meals.map(x=>row(x,'meals','🍽️')),...state.workouts.map(x=>row(x,'workouts','🏃')),...state.weights.map(x=>row(x,'weights','⚖️')),...state.expenses.map(x=>row(x,'expenses',x.type==='income'?'💰':'🧾'))];$('#record-list').innerHTML=all.join('')||'暂无记录';const savings=$('#saving-list');if(savings)savings.innerHTML=state.savings.map(x=>`<div class="history-row"><div><p>🎯 ${x.name}</p><small>目标 ¥${x.target}</small></div><button class="text-button" data-delete="savings:${x.id}">删除</button></div>`).join('')||'暂无存钱计划';}
@@ -52,6 +64,34 @@ $('#add-game-button').onclick=()=>dialog('添加游戏','<label class="form-fiel
 $('#meal-plan-select').onchange=e=>{state.activeMealPlan=e.target.value;state.draftFoods=state.mealPlans.find(x=>x.id===e.target.value).items;save();render();};$('#workout-plan-select').onchange=e=>{state.activeWorkoutPlan=e.target.value;state.exercises=state.workoutPlans.find(x=>x.id===e.target.value).items;save();render();};$('#add-meal-plan').onclick=()=>dialog('新建饮食方案','<label class="form-field">方案名称<input name="name" required></label>',f=>{const x={id:crypto.randomUUID(),name:f.get('name'),items:JSON.parse(JSON.stringify(state.draftFoods))};state.mealPlans.push(x);state.activeMealPlan=x.id;state.draftFoods=x.items;save();render();});$('#add-workout-plan').onclick=()=>dialog('新建训练方案','<label class="form-field">方案名称<input name="name" required></label>',f=>{const x={id:crypto.randomUUID(),name:f.get('name'),items:JSON.parse(JSON.stringify(state.exercises))};state.workoutPlans.push(x);state.activeWorkoutPlan=x.id;state.exercises=x.items;save();render();});
 $('#add-saving-button').onclick=()=>dialog('添加存钱计划','<label class="form-field">计划名称<input name="name" required></label><label class="form-field">目标金额（元）<input name="target" type="number" min="1" required></label>',f=>{state.savings.unshift({id:crypto.randomUUID(),name:f.get('name'),target:Number(f.get('target'))});save();render();});
 $('#today-label').textContent=new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');render();drawTimer();
+
+// The profile button keeps settings out of the day-to-day recording flow.
+const profileButton=document.createElement('button');
+profileButton.id='profile-settings-button';
+profileButton.className='profile-button';
+profileButton.type='button';
+profileButton.setAttribute('aria-label','打开设置');
+profileButton.title='设置';
+profileButton.textContent='我';
+$('#export-button').before(profileButton);
+profileButton.onclick=()=>dialog('设置',`<p class="settings-note">记录会自动保存在本机；连接电脑服务器时会在每次记录后自动同步。</p><label class="form-field">电脑服务器地址<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="http://192.168.1.5:8787"></label>`,f=>{
+  const url=String(f.get('serverUrl')||'').trim().replace(/\/$/,'');
+  $('#server-url-input').value=url;
+  localStorage.setItem('diet-training-server',url);
+  configureNativeAutoSync();
+  if(url){scheduleSync();setSyncStatus('自动同步已开启');showToast('设置已保存，将自动同步');}
+  else {setSyncStatus('仅保存到本机');showToast('设置已保存，记录仅保存在本机');}
+});
+const syncCard=$('#server-url-input')?.closest('.settings-card');
+if(syncCard){
+  syncCard.querySelector('.button-row')?.remove();
+  syncCard.querySelector('h3').textContent='自动同步';
+  syncCard.querySelector('p').textContent='添加或修改记录后会自动同步；可在顶部头像中设置服务器地址。';
+  syncCard.querySelector('label').hidden=true;
+}
+const profileStyles=document.createElement('style');
+profileStyles.textContent=`.profile-button{width:38px;height:38px;border:0;border-radius:50%;background:linear-gradient(145deg,#27643b,#5c9b6d);color:#fff;font:700 14px/1 inherit;box-shadow:0 3px 9px rgba(23,101,52,.22);cursor:pointer;flex:0 0 auto}.profile-button:active{transform:scale(.94)}.settings-note{margin:0 0 14px;color:#66736a;font-size:13px;line-height:1.55}.app-toast{position:fixed;z-index:20;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translate(-50%,12px);width:max-content;max-width:calc(100vw - 36px);padding:10px 14px;border-radius:12px;background:rgba(24,43,28,.92);color:#fff;font-size:13px;box-shadow:0 9px 24px rgba(18,35,22,.22);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.app-toast.show{opacity:1;transform:translate(-50%,0)}`;
+document.head.append(profileStyles);
 
 // Keep record deletion in the page where the record belongs.
 const baseRender = render;
@@ -234,4 +274,56 @@ renderExpenses=()=>{
   $('#expense-history').innerHTML=`<div class="record-group"><h4>\u82b1\u9500</h4>${rows(outgoings,'expenses','\u6682\u65e0\u82b1\u9500\u8bb0\u5f55')}</div><div class="record-group"><h4>\u6536\u5165</h4>${rows(incomes,'expenses','\u6682\u65e0\u6536\u5165\u8bb0\u5f55')}</div>`;
 };
 state.dailyExpenseLimit ??= 15;
+render();
+
+// Android APK only: Health Connect is the supported bridge for OnePlus/OHealth data.
+function renderHealthConnectCard(){
+  const settings=$('#view-trends .settings-card');
+  if(!settings)return;
+  let card=$('#health-connect-card');
+  if(!card){
+    card=document.createElement('article');
+    card.id='health-connect-card';
+    card.className='card health-connect-card';
+    settings.after(card);
+  }
+  const available=Boolean(window.Capacitor?.Plugins?.HealthConnect);
+  const snapshot=state.healthConnectSnapshot;
+  card.innerHTML=`<div class="section-heading"><div><h3>Android 健康数据</h3><p>${available?'通过 Health Connect 读取已授权的一加健康等数据源。':'仅 Android APK 可用；Safari 网页版仍使用手动记录。'}</p></div><span class="tag">${available?'Health Connect':'未连接'}</span></div>${snapshot?`<div class="health-metrics"><span>今日步数 <b>${Number(snapshot.stepsToday||0).toLocaleString()}</b></span><span>消耗 <b>${fmt(snapshot.caloriesBurnedToday||0)} kcal</b></span><span>运动 <b>${snapshot.exerciseSessionsToday||0} 项</b></span></div>`:''}<button id="health-connect-sync" class="secondary full" type="button" ${available?'':'disabled'}>${snapshot?'重新同步 Health Connect':'连接并同步 Health Connect'}</button><p class="health-note">仅在点击同步时读取；数据仍保存在本机。请先在一加健康 / OHealth 中启用同步到 Health Connect。</p>`;
+}
+function configureNativeAutoSync(){
+  const health=window.Capacitor?.Plugins?.HealthConnect;
+  const url=$('#server-url-input')?.value?.trim();
+  if(health&&url)health.configureAutoSync({serverUrl:url,stateJson:JSON.stringify(state)}).catch(()=>{});
+}
+function applyBackgroundHealth(data){
+  if(!data||typeof data!=='object')return;
+  if(data.heightCm)state.height=Math.round(Number(data.heightCm)*10)/10;
+  if(data.weightKg){
+    const date=(data.weightTime||new Date().toISOString()).slice(0,10);
+    if(!state.weights.some(x=>x.date===date&&Math.abs(Number(x.value)-Number(data.weightKg))<0.01))state.weights.push({id:crypto.randomUUID(),date,value:Math.round(Number(data.weightKg)*10)/10,source:'Health Connect'});
+    state.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  state.healthConnectSnapshot={stepsToday:data.stepsToday||0,caloriesBurnedToday:data.caloriesBurnedToday||0,exerciseSessionsToday:data.exerciseSessionsToday||0,syncedAt:data.syncedAt||new Date().toISOString()};
+}
+const previousRender=render;
+render=function(){previousRender();renderHealthConnectCard();};
+document.addEventListener('click',async event=>{
+  if(event.target.id!=='health-connect-sync')return;
+  const health=window.Capacitor?.Plugins?.HealthConnect;
+  if(!health)return;
+  const button=event.target;
+  try{
+    button.disabled=true;button.textContent='正在请求授权…';
+    const permission=await health.requestHealthPermissions();
+    if(!permission.granted){alert('未获得全部健康数据权限，可在系统设置 → Health Connect 中重新授权。');return;}
+    button.textContent='正在读取数据…';
+    const data=await health.readLatest();
+    applyBackgroundHealth(data);
+    save();render();alert('Health Connect 数据已同步到本机。');
+  }catch(error){alert(error?.message||'Health Connect 同步失败，请检查授权和数据源。');}
+  finally{button.disabled=false;}
+});
+// A background Android sync may have run while the app was closed. Bring those values into local storage on launch.
+(async()=>{try{const health=window.Capacitor?.Plugins?.HealthConnect;if(!health)return;configureNativeAutoSync();const result=await health.getBackgroundHealth();if(!result.healthJson)return;applyBackgroundHealth(JSON.parse(result.healthJson));localStorage.setItem('diet-training-state',JSON.stringify(state));render();configureNativeAutoSync();}catch{}})();
 render();

@@ -21,6 +21,22 @@ DATABASE = ROOT / "diet-training.db"
 DEFAULT_STATE = {"meals": [], "workouts": [], "weights": [], "expenses": [], "height": 163, "draftFoods": []}
 
 
+def merge_state(current: dict, incoming: dict) -> dict:
+    """Preserve records created on either device instead of last-write-wins."""
+    merged = {**current, **incoming}
+    for key in ("meals", "workouts", "weights", "expenses", "games", "savings"):
+        seen: dict[str, dict] = {}
+        for item in current.get(key, []) + incoming.get(key, []):
+            if not isinstance(item, dict):
+                continue
+            item_id = str(item.get("id") or f"{item.get('date')}:{item.get('name')}:{item.get('value')}")
+            previous = seen.get(item_id)
+            if previous is None or str(item.get("updatedAt", item.get("createdAt", ""))) >= str(previous.get("updatedAt", previous.get("createdAt", ""))):
+                seen[item_id] = item
+        merged[key] = sorted(seen.values(), key=lambda item: str(item.get("createdAt", item.get("date", ""))), reverse=True)
+    return merged
+
+
 def connect() -> sqlite3.Connection:
     db = sqlite3.connect(DATABASE)
     db.execute("CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY CHECK (id = 1), payload TEXT NOT NULL, updated_at TEXT NOT NULL)")
@@ -34,6 +50,7 @@ def load_state() -> dict:
 
 
 def save_state(state: dict) -> None:
+    state = merge_state(load_state(), state)
     payload = json.dumps(state, ensure_ascii=False, separators=(",", ":"))
     with connect() as db:
         db.execute(

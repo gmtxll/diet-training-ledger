@@ -1,0 +1,31 @@
+(() => {
+  state.goals ||= {kcal:1800,protein:100,steps:8000};
+  state.favoriteFoods ||= [];
+  const css=`.upgrade{display:grid;gap:11px}.upgrade p{font-size:13px;color:#68756b}.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.mini-grid span{padding:9px;background:#f1f7f0;border-radius:10px;font-size:11px;color:#67766b;display:grid;gap:2px}.mini-grid b{font-size:13px;color:#1f4729}.progress{height:7px;background:#e5eee5;border-radius:8px;overflow:hidden}.progress i{display:block;height:100%;background:#55a56d;border-radius:8px}.saving-line{display:grid;grid-template-columns:1fr auto;gap:5px;padding:8px 0;border-bottom:1px solid #edf0ec;font-size:13px}.saving-line .progress{grid-column:1/-1}.food-tools{display:flex;gap:8px;align-items:center}.food-tools select{min-height:40px;border:1px solid #d7e1d5;border-radius:10px;padding:0 8px;background:#fff}`;
+  document.head.insertAdjacentHTML('beforeend',`<style>${css}</style>`);
+  function card(id,anchor){let el=document.querySelector('#'+id);if(!el){el=document.createElement('article');el.id=id;el.className='card upgrade';anchor.after(el)}return el}
+  function saveUpgraded(){save();render();}
+  function avg7(){const rows=[...state.weights].sort((a,b)=>a.date.localeCompare(b.date)).slice(-7);return rows.length?rows.reduce((n,x)=>n+Number(x.value),0)/rows.length:null}
+  function renderUpgrades(){
+    const totals=todayTotals(), health=state.healthConnectSnapshot||{};
+    const goal=card('goal-card',document.querySelector('#view-home .stats-grid'));
+    goal.innerHTML=`<div class="section-heading"><h3>今日目标</h3><button class="text-button" id="set-goals">设置</button></div><div class="mini-grid"><span>热量<b>${fmt(totals.kcal)}/${state.goals.kcal}</b></span><span>蛋白质<b>${fmt(totals.protein)}/${state.goals.protein}g</b></span><span>步数<b>${Number(health.stepsToday||0).toLocaleString()}/${Number(state.goals.steps).toLocaleString()}</b></span></div>`;
+    const backup=card('backup-card',document.querySelector('#view-trends .settings-card:last-of-type'));
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith('diet-training-backup-')).sort();
+    backup.innerHTML=`<div class="section-heading"><h3>备份与同步</h3><button class="text-button" id="restore-backup" ${keys.length?'':'disabled'}>恢复备份</button></div><p>最近本机备份：${keys.at(-1)?.slice(-10)||'暂无'}；手机和电脑同步时自动合并不同记录。</p><div class="mini-grid"><span>7日均重<b>${avg7()?fmt(avg7())+' kg':'—'}</b></span><span>上次同步<b>${health.syncedAt?new Date(health.syncedAt).toLocaleDateString('zh-CN'):'—'}</b></span><span>服务器<b>${document.querySelector('#sync-status')?.textContent||'—'}</b></span></div>`;
+    const food=document.querySelector('#view-food');let tools=document.querySelector('#food-tools');if(!tools){tools=document.createElement('div');tools.id='food-tools';tools.className='food-tools';food.querySelector('.button-row').after(tools)}tools.innerHTML=`<button class="secondary" id="copy-meal">复制上一餐</button><select id="meal-category"><option>早餐</option><option>午餐</option><option>晚餐</option><option selected>正餐</option><option>加餐</option></select>`;
+    const saved=state.expenses.filter(x=>x.type==='income').reduce((n,x)=>n+Number(x.amount),0), saving=card('saving-progress',document.querySelector('#saving-list').closest('article'));
+    saving.innerHTML='<h3>存钱计划进度</h3>'+(state.savings.length?state.savings.map(x=>{const p=Math.min(100,saved/x.target*100||0);return `<div class="saving-line"><b>${x.name}</b><span>${money(saved)} / ${money(x.target)}</span><div class="progress"><i style="width:${p}%"></i></div></div>`}).join(''):'<p>新增计划后将按收入自动计算进度。</p>');
+  }
+  const oldRender=render;render=()=>{oldRender();renderUpgrades()};
+  document.addEventListener('click',e=>{
+    if(e.target.id==='set-goals')dialog('设置每日目标','<label class="form-field">热量 kcal<input name="k" type="number" value="'+state.goals.kcal+'"></label><label class="form-field">蛋白质 g<input name="p" type="number" value="'+state.goals.protein+'"></label><label class="form-field">步数<input name="s" type="number" value="'+state.goals.steps+'"></label>',f=>{state.goals={kcal:Number(f.get('k')),protein:Number(f.get('p')),steps:Number(f.get('s'))};saveUpgraded()});
+    if(e.target.id==='restore-backup'){const key=Object.keys(localStorage).filter(k=>k.startsWith('diet-training-backup-')).sort().at(-1);if(key&&confirm('恢复最近备份会覆盖当前本机记录，继续吗？')){state=JSON.parse(localStorage.getItem(key));saveUpgraded()}}
+    if(e.target.id==='copy-meal'){const last=state.meals[0];if(!last)return alert('暂无可复制的饮食记录');state.meals.unshift({...last,id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString()});saveUpgraded()}
+    const index=e.target.dataset.favorite;if(index!==undefined){const name=state.draftFoods[Number(index)]?.name;if(!name)return;state.favoriteFoods.includes(name)?state.favoriteFoods=state.favoriteFoods.filter(x=>x!==name):state.favoriteFoods.push(name);saveUpgraded()}
+  });
+  const oldFood=renderFood;renderFood=()=>{oldFood();document.querySelectorAll('#meal-items .item-row').forEach((row,i)=>{if(row.querySelector('[data-favorite]'))return;row.insertAdjacentHTML('beforeend',`<button class="text-button" data-favorite="${i}">${state.favoriteFoods.includes(state.draftFoods[i].name)?'★':'☆'} 常用</button>`)});};
+  document.querySelector('#save-meal-button').onclick=()=>{const t=calcMeal(), category=document.querySelector('#meal-category')?.value||'正餐';state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:category,category,...t});saveUpgraded()};
+  document.querySelector('#add-exercise-button').onclick=()=>dialog('添加训练动作','<label class="form-field">动作<input name="name" required></label><label class="form-field">组数<input name="sets" type="number" value="3"></label><label class="form-field">次数<input name="reps" type="number" value="12"></label><label class="form-field">重量 kg<input name="weight" type="number" value="0" step="0.5"></label><label class="form-field">RPE<input name="rpe" type="number" min="1" max="10" value="7"></label>',f=>{const x={name:f.get('name'),sets:+f.get('sets'),reps:+f.get('reps'),weight:+f.get('weight'),rpe:+f.get('rpe')};x.target=`${x.sets} 组 × ${x.reps} 次${x.weight?' × '+x.weight+'kg':''}`;state.exercises.push(x);saveUpgraded()});
+  render();
+})();
