@@ -378,3 +378,6 @@ document.addEventListener('click',async event=>{
 // A background Android sync may have run while the app was closed. Bring those values into local storage on launch.
 (async()=>{try{const health=window.Capacitor?.Plugins?.HealthConnect;if(!health)return;configureNativeAutoSync();const result=await health.getBackgroundHealth();if(!result.healthJson)return;applyBackgroundHealth(JSON.parse(result.healthJson));localStorage.setItem('diet-training-state',JSON.stringify(state));render();configureNativeAutoSync();}catch{}})();
 render();
+// The computer page and phone page each have their own browser storage.
+// Refresh from the shared server shortly after opening so both screens converge.
+setTimeout(()=>pullFromServer(),1000);
