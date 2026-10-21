@@ -83,7 +83,9 @@ function setSyncStatus(message){$('#sync-status').textContent=message;}
 function scheduleSync(){clearTimeout(syncTimer);if(serverUrl())syncTimer=setTimeout(pushToServer,700);}
 async function pushToServer(){const url=serverUrl();if(!url)return;try{setSyncStatus('正在同步到电脑…');const response=await fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
 async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await fetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{setSyncStatus('无法连接电脑服务器');}}
-$('#server-url-input').value=localStorage.getItem('diet-training-server')||'http://192.168.1.5:8787';
+// When opened through Tailscale (or the LAN server), sync back to that same server by default.
+const defaultServerUrl=location.port==='8787'?location.origin:'http://192.168.1.5:8787';
+$('#server-url-input').value=localStorage.getItem('diet-training-server')||defaultServerUrl;
 $('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server',serverUrl());configureNativeAutoSync();setSyncStatus('地址已保存；Android 将在 Wi‑Fi 下自动同步');};
 $('#push-server-button')?.remove();
 $('#pull-server-button')?.remove();
