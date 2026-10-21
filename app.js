@@ -75,6 +75,20 @@ $('#pull-server-button')?.remove();
 window.addEventListener('pagehide',()=>{const url=serverUrl();if(url)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
 scheduleSync();
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
+// Versioned defaults: update only bundled plans, never historical records or custom plans.
+const PLAN_UPDATE_VERSION=2;
+if((state.planUpdateVersion||0)<PLAN_UPDATE_VERSION){
+  let defaultMeal=state.mealPlans.find(x=>x.id==='default-meal');
+  if(!defaultMeal){defaultMeal={id:'default-meal',name:'\u51cf\u8102\u57fa\u7840\u914d\u65b9',items:clonePlanItems(latestFoods)};state.mealPlans.unshift(defaultMeal);}
+  else {defaultMeal.name='\u51cf\u8102\u57fa\u7840\u914d\u65b9';defaultMeal.items=clonePlanItems(latestFoods);}
+  let defaultWorkout=state.workoutPlans.find(x=>x.id==='default-workout');
+  if(!defaultWorkout){defaultWorkout={id:'default-workout',name:'\u51cf\u8102\u529b\u91cf\u5faa\u73af',items:clonePlanItems(latestExercises)};state.workoutPlans.unshift(defaultWorkout);}
+  else {defaultWorkout.name='\u51cf\u8102\u529b\u91cf\u5faa\u73af';defaultWorkout.items=clonePlanItems(latestExercises);}
+  if(state.activeMealPlan==='default-meal')state.draftFoods=defaultMeal.items;
+  if(state.activeWorkoutPlan==='default-workout')state.exercises=defaultWorkout.items;
+  state.planUpdateVersion=PLAN_UPDATE_VERSION;
+  save();
+}
 function removeRecord(type,id){state[type]=state[type].filter(x=>x.id!==id);save();render();}
 function renderExtras(){const mp=$('#meal-plan-select'),wp=$('#workout-plan-select');if(mp)mp.innerHTML=state.mealPlans.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');if(wp)wp.innerHTML=state.workoutPlans.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');if(mp)mp.value=state.activeMealPlan;if(wp)wp.value=state.activeWorkoutPlan;const exercises=$('#exercise-list');if(exercises)exercises.innerHTML=state.exercises.map((x,i)=>`<p><span>${i+1}</span>${x.name}<b>${x.target}</b><button class="text-button" data-delete-exercise="${i}">删除</button></p>`).join('');const row=(x,type,label)=>`<div class="history-row"><div><p>${label} · ${x.name||x.date}</p><small>${x.date||''}</small></div><button class="text-button" data-delete="${type}:${x.id}">删除</button></div>`;$('#playing-games').innerHTML=state.games.filter(x=>x.status==='playing').map(x=>row(x,'games','🎮')).join('')||'暂无正在玩的游戏';$('#finished-games').innerHTML=state.games.filter(x=>x.status==='finished').map(x=>row(x,'games','✅')).join('')||'暂无已游玩游戏';const all=[...state.meals.map(x=>row(x,'meals','🍽️')),...state.workouts.map(x=>row(x,'workouts','🏃')),...state.weights.map(x=>row(x,'weights','⚖️')),...state.expenses.map(x=>row(x,'expenses',x.type==='income'?'💰':'🧾'))];$('#record-list').innerHTML=all.join('')||'暂无记录';const savings=$('#saving-list');if(savings)savings.innerHTML=state.savings.map(x=>`<div class="history-row"><div><p>🎯 ${x.name}</p><small>目标 ¥${x.target}</small></div><button class="text-button" data-delete="savings:${x.id}">删除</button></div>`).join('')||'暂无存钱计划';}
 document.addEventListener('click',e=>{const id=e.target.dataset.delete;if(id){const [type,key]=id.split(':');removeRecord(type,key)}if(e.target.dataset.deleteExercise!==undefined){state.exercises.splice(Number(e.target.dataset.deleteExercise),1);save();renderExtras();}});

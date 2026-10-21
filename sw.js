@@ -1,4 +1,4 @@
-const CACHE = 'diet-training-shell-v11';
+const CACHE = 'diet-training-shell-v12';
 const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js','./upgrades.js','./manifest.webmanifest'];
 
 async function refreshAsset(cache, url){
