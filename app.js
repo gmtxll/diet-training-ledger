@@ -65,7 +65,7 @@ function openView(name){
   document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));
   $(`#view-${name}`).classList.add('active');
   document.querySelector(`[data-view="${name}"]`)?.classList.add('active');
-  if(name==='workout'){scheduleSync();showToast('训练记录会自动保存并同步到电脑');}
+  if(name==='workout')scheduleSync();
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>openView(b.dataset.go));
 $('#dialog-close').onclick=$('#dialog-cancel').onclick=()=>$('#entry-dialog').close();
@@ -251,11 +251,13 @@ render();
 
 // A backup can be restored after Safari site data is cleared to refresh the PWA.
 const importButton=document.createElement('button');
+importButton.id='import-backup-button';
 importButton.className='icon-button';
 importButton.type='button';
 importButton.textContent='\u21e9';
 importButton.setAttribute('aria-label','\u5bfc\u5165\u5907\u4efd');
 const importFile=document.createElement('input');
+importFile.id='import-backup-file';
 importFile.type='file';
 importFile.accept='application/json';
 importFile.hidden=true;
@@ -381,3 +383,46 @@ render();
 // The computer page and phone page each have their own browser storage.
 // Refresh from the shared server shortly after opening so both screens converge.
 setTimeout(()=>pullFromServer(),1000);
+
+// Header calendar and a compact settings list keep daily controls in one place.
+const calendarButton=document.createElement('button');
+calendarButton.id='calendar-button';
+calendarButton.className='icon-button calendar-button';
+calendarButton.type='button';
+calendarButton.title='\u65e5\u5386';
+calendarButton.setAttribute('aria-label','\u67e5\u770b\u65e5\u5386\u8bb0\u5f55');
+calendarButton.textContent='\ud83d\uddd3\ufe0f';
+profileButton.before(calendarButton);
+
+function dateRecordRows(date){
+  const row=(icon,title,detail)=>`<div class="history-row"><div><p>${icon} ${title}</p><small>${detail}</small></div></div>`;
+  const meals=state.meals.filter(x=>x.date===date).map(x=>row('\ud83c\udf7d\ufe0f',x.name||'\u996e\u98df',`${fmt(x.kcal||0)} kcal`));
+  const workouts=state.workouts.filter(x=>x.date===date).map(x=>row('\ud83c\udfc3',x.exercises?.length?'\u8bad\u7ec3':'\u8bad\u7ec3\u8bb0\u5f55',`${x.rounds||0} \u8f6e`));
+  const weights=state.weights.filter(x=>x.date===date).map(x=>row('\u2696\ufe0f','\u4f53\u91cd',`${fmt(x.value)} kg`));
+  const expenses=state.expenses.filter(x=>x.date===date).map(x=>row(x.type==='income'?'\ud83d\udcb0':'\ud83e\uddfe',x.name||'\u8bb0\u8d26',money(x.amount||0)));
+  return [...meals,...workouts,...weights,...expenses];
+}
+function openCalendar(){
+  dialog('\u65e5\u5386\u8bb0\u5f55',`<label class="form-field">\u65e5\u671f<input id="calendar-date-input" type="date" value="${today()}"></label><div id="calendar-record-list" class="history-list empty-state"></div>`,()=>{});
+  const form=$('#entry-form');
+  form.querySelector('.primary').textContent='\u5173\u95ed';
+  const input=$('#calendar-date-input'),list=$('#calendar-record-list');
+  const refresh=()=>{const rows=dateRecordRows(input.value);list.className=rows.length?'history-list':'history-list empty-state';list.innerHTML=rows.length?rows.join(''):'\u5f53\u65e5\u6682\u65e0\u8bb0\u5f55';};
+  input.onchange=refresh;refresh();
+}
+function openSettingsList(){
+  dialog('\u8bbe\u7f6e',`<p class="settings-note">\u8bb0\u5f55\u4f1a\u81ea\u52a8\u4fdd\u5b58\u5e76\u540c\u6b65\u3002</p><div class="settings-list"><button type="button" id="settings-export">\ud83d\udce5 \u4e0b\u8f7d\u5907\u4efd</button><button type="button" id="settings-import">\ud83d\udce4 \u4e0a\u4f20\u5907\u4efd</button></div><label class="form-field">\u7535\u8111\u670d\u52a1\u5668\u5730\u5740<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="http://100.76.118.55:8787"></label>`,f=>{
+    const url=String(f.get('serverUrl')||'').trim().replace(/\/$/,'');
+    $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
+    if(url){scheduleSync();setSyncStatus('\u81ea\u52a8\u540c\u6b65\u5df2\u5f00\u542f');}else setSyncStatus('\u4ec5\u4fdd\u5b58\u5230\u672c\u673a');
+  });
+  $('#settings-export').onclick=()=>$('#export-button').click();
+  $('#settings-import').onclick=()=>$('#import-backup-file').click();
+}
+calendarButton.onclick=openCalendar;
+profileButton.onclick=openSettingsList;
+$('#export-button').hidden=true;
+$('#import-backup-button').hidden=true;
+const settingsListStyles=document.createElement('style');
+settingsListStyles.textContent=`.calendar-button{font-size:20px}.settings-list{display:grid;border:1px solid #e4ebe2;border-radius:12px;overflow:hidden;margin:12px 0}.settings-list button{border:0;border-bottom:1px solid #e4ebe2;background:#fff;padding:13px 12px;text-align:left;font:inherit;color:#1f4729;font-weight:650}.settings-list button:last-child{border-bottom:0}.settings-list button:active{background:#f1f7f0}`;
+document.head.append(settingsListStyles);
