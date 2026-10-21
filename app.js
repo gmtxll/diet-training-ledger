@@ -24,12 +24,13 @@ const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, dr
 let state = JSON.parse(localStorage.getItem('diet-training-state') || 'null') || initial;
 // Older backups and computer-sync snapshots may not contain every collection.
 // Normalize them before any UI code runs so one missing field cannot stop the app.
-state.meals ||= [];
-state.workouts ||= [];
-state.weights ||= [];
-state.expenses ||= [];
-state.games ||= [];
-state.savings ||= [];
+if(!state || typeof state!=='object' || Array.isArray(state))state=clonePlanItems(initial);
+if(!Array.isArray(state.meals))state.meals=[];
+if(!Array.isArray(state.workouts))state.workouts=[];
+if(!Array.isArray(state.weights))state.weights=[];
+if(!Array.isArray(state.expenses))state.expenses=[];
+if(!Array.isArray(state.games))state.games=[];
+if(!Array.isArray(state.savings))state.savings=[];
 state.draftFoods ||= clonePlanItems(latestFoods);
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
 const save = () => { state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
@@ -331,4 +332,4 @@ function renderHealthConnectCard(){
   }
   const available=Boolean(window.Capacitor?.Plugins?.HealthConnect);
   const snapshot=state.healthConnectSnapshot;
-  card.innerHTML=`<div class="section-heading"><div><h3>Android 鍋ュ悍鏁版嵁</h3><p>${available?'閫氳繃 Health Connect 璇诲彇宸叉巿鏉冪殑涓€鍔犲仴搴风瓑鏁版嵁婧愩€?:'浠?Android APK 鍙敤锛汼afari 缃戦〉鐗堜粛浣跨敤鎵嬪姩璁板綍銆?}</p></div><span class="tag">${available?'Health Connect':'鏈繛鎺?}</span></div>${snapshot?`<div class="health-metrics"><span>浠婃棩姝ユ暟 <b>${Number(snapshot.stepsToday||0).toLocaleString()}</b></span
+  card.innerHTML=`<div class="section-heading"><div><h3>Android 鍋ュ悍鏁版嵁</h3><p>${available?'閫氳繃 Health Connect 璇诲彇宸叉巿鏉冪殑涓€鍔犲仴搴风瓑鏁版嵁婧愩€?:'浠?Android APK 鍙敤锛汼afari
