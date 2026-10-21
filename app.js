@@ -4,7 +4,23 @@ const month = () => today().slice(0, 7);
 const foods = [
   ['即食燕麦',260,393,11,10.6],['全脂奶粉',50,517,25.1,0],['花生酱',35,588,25,6],['亚麻籽粉',10,534,18.3,27.3],['大豆分离蛋白',20,350,76,1.4],['即食脱水蔬菜',20,300,10,20]
 ].map(([name,grams,kcal,protein,fiber])=>({name,grams,kcal,protein,fiber}));
-const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, draftFoods:foods };
+const latestFoods=[
+  {name:'\u5373\u98df\u71d5\u9ea6',grams:280,kcal:393,protein:11,fiber:10.6},
+  {name:'\u82b1\u751f\u9171',grams:35,kcal:588,protein:25,fiber:6},
+  {name:'\u4e9a\u9ebb\u7c7d\u7c89',grams:10,kcal:534,protein:18.3,fiber:27.3},
+  {name:'\u5927\u8c46\u5206\u79bb\u86cb\u767d',grams:36.5,kcal:350,protein:76,fiber:1.4},
+  {name:'\u5373\u98df\u8131\u6c34\u852c\u83dc',grams:20,kcal:300,protein:10,fiber:20}
+];
+const latestExercises=[
+  {name:'\u6df1\u8e72',target:'25\u201330 \u6b21'},
+  {name:'\u4fef\u5367\u6491',target:'10\u201315 \u6b21\uff08\u529b\u7aed\u524d\u505c\uff09'},
+  {name:'\u5f39\u529b\u5e26\u5212\u8239',target:'10\u201315 \u6b21'},
+  {name:'\u81c0\u6865',target:'12\u201320 \u6b21'},
+  {name:'\u5e73\u677f\u652f\u6491',target:'45\u201360 \u79d2'},
+  {name:'\u5377\u8179',target:'25\u201330 \u6b21'}
+];
+const clonePlanItems=(items)=>JSON.parse(JSON.stringify(items));
+const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, draftFoods:clonePlanItems(latestFoods) };
 let state = JSON.parse(localStorage.getItem('diet-training-state') || 'null') || initial;
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
 const save = () => { state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
