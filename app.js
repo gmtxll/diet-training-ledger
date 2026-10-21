@@ -22,6 +22,15 @@ const latestExercises=[
 const clonePlanItems=(items)=>JSON.parse(JSON.stringify(items));
 const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, draftFoods:clonePlanItems(latestFoods) };
 let state = JSON.parse(localStorage.getItem('diet-training-state') || 'null') || initial;
+// Older backups and computer-sync snapshots may not contain every collection.
+// Normalize them before any UI code runs so one missing field cannot stop the app.
+state.meals ||= [];
+state.workouts ||= [];
+state.weights ||= [];
+state.expenses ||= [];
+state.games ||= [];
+state.savings ||= [];
+state.draftFoods ||= clonePlanItems(latestFoods);
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
 const save = () => { state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
 const fmt = (n) => Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
