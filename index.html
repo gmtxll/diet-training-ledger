@@ -6,59 +6,59 @@
   <meta name="theme-color" content="#166534">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>饮食训练本</title>
+  <title>楗璁粌鏈?/title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="sync.css">
 </head>
 <body>
   <main class="app-shell">
-    <header class="app-header"><div><p class="eyebrow" id="today-label"></p><h1>饮食训练本</h1></div><button class="icon-button" id="export-button" aria-label="导出本地数据">⇧</button></header>
+    <header class="app-header"><div><p class="eyebrow" id="today-label"></p><h1>楗璁粌鏈?/h1></div><button class="icon-button" id="export-button" aria-label="瀵煎嚭鏈湴鏁版嵁">鈬?/button></header>
     <section id="view-home" class="view active" aria-labelledby="home-title">
-      <h2 id="home-title">今日概览</h2>
+      <h2 id="home-title">浠婃棩姒傝</h2>
       <div class="stats-grid">
-        <article class="stat-card"><span>热量</span><strong id="today-kcal">0</strong><small>kcal</small></article>
-        <article class="stat-card"><span>蛋白质</span><strong id="today-protein">0</strong><small>g</small></article>
-        <article class="stat-card"><span>本月花销</span><strong id="month-expense">¥0</strong><small>食材与补剂</small></article>
+        <article class="stat-card"><span>鐑噺</span><strong id="today-kcal">0</strong><small>kcal</small></article>
+        <article class="stat-card"><span>铔嬬櫧璐?/span><strong id="today-protein">0</strong><small>g</small></article>
+        <article class="stat-card"><span>鏈湀鑺遍攢</span><strong id="month-expense">楼0</strong><small>椋熸潗涓庤ˉ鍓?/small></article>
       </div>
-      <article class="card action-card"><div><p class="eyebrow">下一步</p><h3 id="workout-summary">今天还未训练</h3><p>完成一次训练或添加一餐，数据会自动汇总。</p></div><button class="primary" data-go="workout">开始训练</button></article>
-      <section class="section"><div class="section-heading"><h3>今日记录</h3><button class="text-button" data-go="food">添加饮食</button></div><div id="today-timeline" class="timeline empty-state">今天还没有记录</div></section>
+      <article class="card action-card"><div><p class="eyebrow">涓嬩竴姝?/p><h3 id="workout-summary">浠婂ぉ杩樻湭璁粌</h3><p>瀹屾垚涓€娆¤缁冩垨娣诲姞涓€椁愶紝鏁版嵁浼氳嚜鍔ㄦ眹鎬汇€?/p></div><button class="primary" data-go="workout">寮€濮嬭缁?/button></article>
+      <section class="section"><div class="section-heading"><h3>浠婃棩璁板綍</h3><button class="text-button" data-go="food">娣诲姞楗</button></div><div id="today-timeline" class="timeline empty-state">浠婂ぉ杩樻病鏈夎褰?/div></section>
     </section>
 
     <section id="view-food" class="view" aria-labelledby="food-title">
-      <div class="section-heading"><div><p class="eyebrow">饮食</p><h2 id="food-title">记录一餐</h2></div><button class="text-button" id="add-food-button">自定义食材</button></div><div class="button-row"><select id="meal-plan-select"></select><button class="secondary" id="add-meal-plan">＋ 方案</button></div>
-      <article class="card"><div class="section-heading"><h3>一餐方案</h3><span class="tag">模板</span></div><div id="meal-items" class="item-list"></div><div class="meal-total"><span>当前合计</span><strong id="meal-total">0 kcal · 0 g 蛋白质</strong></div><button class="primary full" id="save-meal-button">保存到今天</button></article>
-      <section class="section"><div class="section-heading"><h3>最近饮食</h3></div><div id="food-history" class="history-list empty-state">暂无饮食记录</div></section>
+      <div class="section-heading"><div><p class="eyebrow">楗</p><h2 id="food-title">璁板綍涓€椁?/h2></div><button class="text-button" id="add-food-button">鑷畾涔夐鏉?/button></div><div class="button-row"><select id="meal-plan-select"></select><button class="secondary" id="add-meal-plan">锛?鏂规</button></div>
+      <article class="card"><div class="section-heading"><h3>涓€椁愭柟妗?/h3><span class="tag">妯℃澘</span></div><div id="meal-items" class="item-list"></div><div class="meal-total"><span>褰撳墠鍚堣</span><strong id="meal-total">0 kcal 路 0 g 铔嬬櫧璐?/strong></div><button class="primary full" id="save-meal-button">淇濆瓨鍒颁粖澶?/button></article>
+      <section class="section"><div class="section-heading"><h3>鏈€杩戦ギ椋?/h3></div><div id="food-history" class="history-list empty-state">鏆傛棤楗璁板綍</div></section>
     </section>
 
     <section id="view-workout" class="view" aria-labelledby="workout-title">
-      <div><p class="eyebrow">训练</p><h2 id="workout-title">自重循环</h2><p class="muted">深蹲、俯卧撑、平板支撑、卷腹</p></div><div class="button-row"><select id="workout-plan-select"></select><button class="secondary" id="add-workout-plan">＋ 方案</button></div>
-      <article class="timer-card"><p id="timer-state">准备开始</p><strong id="timer-display">00:00</strong><h3 id="exercise-name">第 1 项：深蹲</h3><p id="exercise-detail">目标 25–30 次 · 共 3 轮</p><div class="button-row"><button class="secondary" id="reset-timer">重置</button><button class="secondary" id="next-exercise">下一项</button><button class="primary" id="timer-toggle">开始</button></div></article>
-      <article class="card"><div class="section-heading"><h3>训练设置</h3><label class="compact-input">轮数 <input id="rounds-input" type="number" min="1" max="8" value="3"></label></div><label class="compact-input">组间休息（秒） <input id="rest-input" type="number" min="0" value="45"></label><div id="exercise-list" class="exercise-list"></div><button class="text-button" id="add-exercise-button">＋ 添加动作</button><button class="secondary full" id="complete-workout">保存本次训练</button></article>
-      <section class="section"><h3>训练历史</h3><div id="workout-history" class="history-list empty-state">暂无训练记录</div></section>
+      <div><p class="eyebrow">璁粌</p><h2 id="workout-title">鑷噸寰幆</h2><p class="muted">娣辫共銆佷刊鍗ф拺銆佸钩鏉挎敮鎾戙€佸嵎鑵?/p></div><div class="button-row"><select id="workout-plan-select"></select><button class="secondary" id="add-workout-plan">锛?鏂规</button></div>
+      <article class="timer-card"><p id="timer-state">鍑嗗寮€濮?/p><strong id="timer-display">00:00</strong><h3 id="exercise-name">绗?1 椤癸細娣辫共</h3><p id="exercise-detail">鐩爣 25鈥?0 娆?路 鍏?3 杞?/p><div class="button-row"><button class="secondary" id="reset-timer">閲嶇疆</button><button class="secondary" id="next-exercise">涓嬩竴椤?/button><button class="primary" id="timer-toggle">寮€濮?/button></div></article>
+      <article class="card"><div class="section-heading"><h3>璁粌璁剧疆</h3><label class="compact-input">杞暟 <input id="rounds-input" type="number" min="1" max="8" value="3"></label></div><label class="compact-input">缁勯棿浼戞伅锛堢锛?<input id="rest-input" type="number" min="0" value="45"></label><div id="exercise-list" class="exercise-list"></div><button class="text-button" id="add-exercise-button">锛?娣诲姞鍔ㄤ綔</button><button class="secondary full" id="complete-workout">淇濆瓨鏈璁粌</button></article>
+      <section class="section"><h3>璁粌鍘嗗彶</h3><div id="workout-history" class="history-list empty-state">鏆傛棤璁粌璁板綍</div></section>
     </section>
 
     <section id="view-trends" class="view" aria-labelledby="trends-title">
-      <div class="section-heading"><div><p class="eyebrow">身体数据</p><h2 id="trends-title">体重与 BMI</h2></div><button class="text-button" id="add-weight-button">记录体重</button></div>
-      <div class="stats-grid"><article class="stat-card"><span>最新体重</span><strong id="latest-weight">—</strong><small>kg</small></article><article class="stat-card"><span>BMI</span><strong id="bmi-value">—</strong><small id="height-caption">请设置身高</small></article></div>
-      <article class="card"><h3>趋势</h3><div id="weight-chart" class="weight-chart empty-state">记录体重后显示趋势</div></article>
-      <article class="card settings-card"><h3>数据来源</h3><p>默认使用本地手动记录。iPhone 可接入 Apple 健康；Android APK 可经 Health Connect 读取已授权的健康数据。</p><label>身高（cm）<input id="height-input" type="number" min="80" max="250" placeholder="例如 163"></label></article>
-      <article class="card settings-card"><h3>电脑同步</h3><p id="sync-status">未连接电脑服务器</p><label>服务器地址<input id="server-url-input" type="url" placeholder="http://192.168.1.10:8787"></label><div class="button-row"><button class="secondary" id="pull-server-button">从电脑读取</button><button class="primary" id="push-server-button">同步到电脑</button></div></article>
+      <div class="section-heading"><div><p class="eyebrow">韬綋鏁版嵁</p><h2 id="trends-title">浣撻噸涓?BMI</h2></div><button class="text-button" id="add-weight-button">璁板綍浣撻噸</button></div>
+      <div class="stats-grid"><article class="stat-card"><span>鏈€鏂颁綋閲?/span><strong id="latest-weight">鈥?/strong><small>kg</small></article><article class="stat-card"><span>BMI</span><strong id="bmi-value">鈥?/strong><small id="height-caption">璇疯缃韩楂?/small></article></div>
+      <article class="card"><h3>瓒嬪娍</h3><div id="weight-chart" class="weight-chart empty-state">璁板綍浣撻噸鍚庢樉绀鸿秼鍔?/div></article>
+      <article class="card settings-card"><h3>鏁版嵁鏉ユ簮</h3><p>榛樿浣跨敤鏈湴鎵嬪姩璁板綍銆俰Phone 鍙帴鍏?Apple 鍋ュ悍锛汚ndroid APK 鍙粡 Health Connect 璇诲彇宸叉巿鏉冪殑鍋ュ悍鏁版嵁銆?/p><label>韬珮锛坈m锛?input id="height-input" type="number" min="80" max="250" placeholder="渚嬪 163"></label></article>
+      <article class="card settings-card"><h3>鐢佃剳鍚屾</h3><p id="sync-status">鏈繛鎺ョ數鑴戞湇鍔″櫒</p><label>鏈嶅姟鍣ㄥ湴鍧€<input id="server-url-input" type="url" placeholder="http://192.168.1.10:8787"></label><div class="button-row"><button class="secondary" id="pull-server-button">浠庣數鑴戣鍙?/button><button class="primary" id="push-server-button">鍚屾鍒扮數鑴?/button></div></article>
     </section>
 
     <section id="view-expenses" class="view" aria-labelledby="expenses-title">
-      <div class="section-heading"><div><p class="eyebrow">记账</p><h2 id="expenses-title">收支与存钱</h2></div><button class="text-button" id="add-expense-button">＋ 记一笔</button></div>
-      <div class="stats-grid"><article class="stat-card"><span>本月总额</span><strong id="expense-total">¥0</strong><small>当前月份</small></article><article class="stat-card"><span>食材</span><strong id="food-expense">¥0</strong><small>本月</small></article></div>
-      <article class="card"><h3>分类</h3><div id="expense-breakdown" class="breakdown"></div></article>
-      <article class="card"><div class="section-heading"><h3>存钱计划</h3><button class="text-button" id="add-saving-button">＋ 添加</button></div><div id="saving-list" class="history-list empty-state">暂无存钱计划</div></article>
-      <section class="section"><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
+      <div class="section-heading"><div><p class="eyebrow">璁拌处</p><h2 id="expenses-title">鏀舵敮涓庡瓨閽?/h2></div><button class="text-button" id="add-expense-button">锛?璁颁竴绗?/button></div>
+      <div class="stats-grid"><article class="stat-card"><span>鏈湀鎬婚</span><strong id="expense-total">楼0</strong><small>褰撳墠鏈堜唤</small></article><article class="stat-card"><span>椋熸潗</span><strong id="food-expense">楼0</strong><small>鏈湀</small></article></div>
+      <article class="card"><h3>鍒嗙被</h3><div id="expense-breakdown" class="breakdown"></div></article>
+      <article class="card"><div class="section-heading"><h3>瀛橀挶璁″垝</h3><button class="text-button" id="add-saving-button">锛?娣诲姞</button></div><div id="saving-list" class="history-list empty-state">鏆傛棤瀛橀挶璁″垝</div></article>
+      <section class="section"><h3>鏈€杩戞槑缁?/h3><div id="expense-history" class="history-list empty-state">鏆傛棤鑺遍攢璁板綍</div></section>
     </section>
-    <section id="view-games" class="view" aria-labelledby="games-title"><div class="section-heading"><div><p class="eyebrow">游戏</p><h2 id="games-title">游戏记录</h2></div><button class="text-button" id="add-game-button">＋ 添加游戏</button></div><article class="card"><h3>当前游玩</h3><div id="playing-games" class="history-list empty-state">暂无正在玩的游戏</div></article><article class="card"><h3>已游玩</h3><div id="finished-games" class="history-list empty-state">暂无已游玩游戏</div></article><article class="card"><h3>全部记录</h3><div id="record-list" class="history-list empty-state">暂无记录</div></article></section>
+    <section id="view-games" class="view" aria-labelledby="games-title"><div class="section-heading"><div><p class="eyebrow">娓告垙</p><h2 id="games-title">娓告垙璁板綍</h2></div><button class="text-button" id="add-game-button">锛?娣诲姞娓告垙</button></div><article class="card"><h3>褰撳墠娓哥帺</h3><div id="playing-games" class="history-list empty-state">鏆傛棤姝ｅ湪鐜╃殑娓告垙</div></article><article class="card"><h3>宸叉父鐜?/h3><div id="finished-games" class="history-list empty-state">鏆傛棤宸叉父鐜╂父鎴?/div></article><article class="card"><h3>鍏ㄩ儴璁板綍</h3><div id="record-list" class="history-list empty-state">鏆傛棤璁板綍</div></article></section>
   </main>
 
-  <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">趋势</button><button data-view="expenses">花销</button><button data-view="games">游戏</button></nav>
-  <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js"></script>
-  <script src="upgrades.js"></script>
+  <nav class="tab-bar" aria-label="涓诲鑸?><button class="active" data-view="home">棣栭〉</button><button data-view="food">楗</button><button data-view="workout">璁粌</button><button data-view="trends">瓒嬪娍</button><button data-view="expenses">鑺遍攢</button><button data-view="games">娓告垙</button></nav>
+  <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">娣诲姞璁板綍</h2><button type="button" id="dialog-close" class="icon-button" aria-label="鍏抽棴">脳</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">鍙栨秷</button><button type="submit" class="primary">淇濆瓨</button></div></form></dialog>
+  <script src="app.js?v=14"></script>
+  <script src="upgrades.js?v=14"></script>
 </body>
 </html>
