@@ -24,12 +24,20 @@ DEFAULT_STATE = {"meals": [], "workouts": [], "weights": [], "expenses": [], "he
 def merge_state(current: dict, incoming: dict) -> dict:
     """Preserve records created on either device instead of last-write-wins."""
     merged = {**current, **incoming}
+    deleted: dict[str, set[str]] = {}
+    for source in (current, incoming):
+        for kind, ids in source.get("deletedRecords", {}).items():
+            if isinstance(ids, list):
+                deleted.setdefault(kind, set()).update(str(item) for item in ids)
+    merged["deletedRecords"] = {kind: sorted(ids) for kind, ids in deleted.items()}
     for key in ("meals", "workouts", "weights", "expenses", "games", "savings"):
         seen: dict[str, dict] = {}
         for item in current.get(key, []) + incoming.get(key, []):
             if not isinstance(item, dict):
                 continue
             item_id = str(item.get("id") or f"{item.get('date')}:{item.get('name')}:{item.get('value')}")
+            if item_id in deleted.get(key, set()):
+                continue
             previous = seen.get(item_id)
             if previous is None or str(item.get("updatedAt", item.get("createdAt", ""))) >= str(previous.get("updatedAt", previous.get("createdAt", ""))):
                 seen[item_id] = item

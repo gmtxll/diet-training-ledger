@@ -107,7 +107,12 @@ if((state.planUpdateVersion||0)<PLAN_UPDATE_VERSION){
   state.planUpdateVersion=PLAN_UPDATE_VERSION;
   save();
 }
-function removeRecord(type,id){state[type]=state[type].filter(x=>x.id!==id);save();render();}
+function removeRecord(type,id){
+  state.deletedRecords ||= {};
+  state.deletedRecords[type] ||= [];
+  if(!state.deletedRecords[type].includes(id))state.deletedRecords[type].push(id);
+  state[type]=state[type].filter(x=>x.id!==id);save();render();
+}
 function renderExtras(){const mp=$('#meal-plan-select'),wp=$('#workout-plan-select');if(mp)mp.innerHTML=state.mealPlans.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');if(wp)wp.innerHTML=state.workoutPlans.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');if(mp)mp.value=state.activeMealPlan;if(wp)wp.value=state.activeWorkoutPlan;const exercises=$('#exercise-list');if(exercises)exercises.innerHTML=state.exercises.map((x,i)=>`<p><span>${i+1}</span>${x.name}<b>${x.target}</b><button class="text-button" data-delete-exercise="${i}">删除</button></p>`).join('');const row=(x,type,label)=>`<div class="history-row"><div><p>${label} · ${x.name||x.date}</p><small>${x.date||''}</small></div><button class="text-button" data-delete="${type}:${x.id}">删除</button></div>`;$('#playing-games').innerHTML=state.games.filter(x=>x.status==='playing').map(x=>row(x,'games','🎮')).join('')||'暂无正在玩的游戏';$('#finished-games').innerHTML=state.games.filter(x=>x.status==='finished').map(x=>row(x,'games','✅')).join('')||'暂无已游玩游戏';const all=[...state.meals.map(x=>row(x,'meals','🍽️')),...state.workouts.map(x=>row(x,'workouts','🏃')),...state.weights.map(x=>row(x,'weights','⚖️')),...state.expenses.map(x=>row(x,'expenses',x.type==='income'?'💰':'🧾'))];$('#record-list').innerHTML=all.join('')||'暂无记录';const savings=$('#saving-list');if(savings)savings.innerHTML=state.savings.map(x=>`<div class="history-row"><div><p>🎯 ${x.name}</p><small>目标 ¥${x.target}</small></div><button class="text-button" data-delete="savings:${x.id}">删除</button></div>`).join('')||'暂无存钱计划';}
 document.addEventListener('click',e=>{const id=e.target.dataset.delete;if(id){const [type,key]=id.split(':');removeRecord(type,key)}if(e.target.dataset.deleteExercise!==undefined){state.exercises.splice(Number(e.target.dataset.deleteExercise),1);save();renderExtras();}});
 $('#add-exercise-button').onclick=()=>dialog('添加训练动作','<label class="form-field">动作名称<input name="name" required></label><label class="form-field">数量/时长<input name="target" required placeholder="例如 12 次"></label>',f=>{state.exercises.push({name:f.get('name'),target:f.get('target')});save();render();});
