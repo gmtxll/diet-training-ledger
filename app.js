@@ -1,4 +1,10 @@
 const $ = (s) => document.querySelector(s);
+// Safari on older iOS versions exposes crypto but not crypto.randomUUID().
+const crypto = {
+  randomUUID: typeof globalThis.crypto?.randomUUID === 'function'
+    ? () => globalThis.crypto.randomUUID()
+    : () => `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,12)}`
+};
 const today = () => new Date().toISOString().slice(0, 10);
 const month = () => today().slice(0, 7);
 const foods = [
