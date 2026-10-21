@@ -1,5 +1,5 @@
-const CACHE = 'diet-training-shell-v14';
-const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=14','./upgrades.js?v=14','./manifest.webmanifest'];
+const CACHE = 'diet-training-shell-v15';
+const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=15','./manifest.webmanifest'];
 
 async function refreshAsset(cache, url){
   const response = await fetch(url, {cache:'reload'});
@@ -18,23 +18,21 @@ self.addEventListener('activate', event => event.waitUntil((async()=>{
   await self.clients.claim();
 })()));
 
-// Cached files open instantly. A background conditional request refreshes only changed files.
+// Prefer the network so a deployed repair is visible immediately; fall back only offline.
 self.addEventListener('fetch', event => {
   const request=event.request;
   if(request.method!=='GET')return;
-  if(request.mode==='navigate'){
-    const refresh=caches.open(CACHE).then(cache=>fetch(request,{cache:'no-cache'}).then(response=>{
-      if(response.ok)cache.put('./index.html',response.clone());
+  event.respondWith((async()=>{
+    try{
+      const response=await fetch(request,{cache:'no-cache'});
+      if(response.ok&&new URL(request.url).origin===location.origin){
+        const cache=await caches.open(CACHE);
+        await cache.put(request.mode==='navigate'?'./index.html':request,response.clone());
+      }
       return response;
-    }));
-    event.waitUntil(refresh.catch(()=>{}));
-    event.respondWith(caches.match('./index.html').then(cached=>cached||refresh));
-    return;
-  }
-  const refresh=caches.open(CACHE).then(cache=>fetch(request,{cache:'no-cache'}).then(response=>{
-    if(response.ok&&new URL(request.url).origin===location.origin)cache.put(request,response.clone());
-    return response;
-  }));
-  event.waitUntil(refresh.catch(()=>{}));
-  event.respondWith(caches.match(request).then(cached=>cached||refresh));
+    }catch{
+      const cache=await caches.open(CACHE);
+      return (await cache.match(request)) || (request.mode==='navigate'&&await cache.match('./index.html')) || Response.error();
+    }
+  })());
 });
