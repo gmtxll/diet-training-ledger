@@ -1,5 +1,5 @@
-const CACHE = 'diet-training-shell-v20';
-const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=20','./manifest.webmanifest'];
+const CACHE = 'diet-training-shell-v21';
+const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=21','./manifest.webmanifest'];
 
 async function refreshAsset(cache, url){
   const response = await fetch(url, {cache:'reload'});
@@ -18,21 +18,29 @@ self.addEventListener('activate', event => event.waitUntil((async()=>{
   await self.clients.claim();
 })()));
 
-// Prefer the network so a deployed repair is visible immediately; fall back only offline.
+// App shell must open immediately on mobile. Return the local shell first and
+// refresh it in the background; network-first made Safari wait on slow DNS/VPN.
 self.addEventListener('fetch', event => {
   const request=event.request;
   if(request.method!=='GET')return;
   event.respondWith((async()=>{
-    try{
-      const response=await fetch(request,{cache:'no-cache'});
+    const cache=await caches.open(CACHE);
+    const cacheKey=request.mode==='navigate'?'./index.html':request;
+    const cached=await cache.match(cacheKey);
+    const refresh=fetch(request,{cache:'no-cache'}).then(async response=>{
       if(response.ok&&new URL(request.url).origin===location.origin){
-        const cache=await caches.open(CACHE);
-        await cache.put(request.mode==='navigate'?'./index.html':request,response.clone());
+        await cache.put(cacheKey,response.clone());
       }
       return response;
+    });
+    if(cached){
+      event.waitUntil(refresh.catch(()=>{}));
+      return cached;
+    }
+    try{
+      return await refresh;
     }catch{
-      const cache=await caches.open(CACHE);
-      return (await cache.match(request)) || (request.mode==='navigate'&&await cache.match('./index.html')) || Response.error();
+      return (await cache.match(cacheKey)) || Response.error();
     }
   })());
 });
