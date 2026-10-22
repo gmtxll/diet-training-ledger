@@ -126,7 +126,7 @@ h3 {
   padding: 0 12px;
   white-space: nowrap;
 }
-.today-status-card{display:grid;gap:18px}.today-checks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.today-check{display:flex;align-items:center;gap:7px;border:1px solid #e3e9e1;border-radius:14px;padding:12px 8px;background:#fafcf9}.today-check>span{font-size:19px}.today-check div{display:grid;gap:2px}.today-check strong{font-size:14px}.today-check small{color:#7a857d;font-size:12px;white-space:nowrap}.today-check.done{border-color:#b9ddbd;background:#edf8ee}.today-check.done small{color:#23713a;font-weight:650}.home-weight-button{grid-column:1/-1}
+.today-status-card{display:grid;gap:18px}.today-checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.today-check{display:flex;align-items:center;gap:9px;border:1px solid #e3e9e1;border-radius:14px;padding:13px;background:#fafcf9}.today-check>span{font-size:21px}.today-check div{display:grid;gap:2px}.today-check strong{font-size:14px}.today-check small{color:#7a857d;font-size:12px;white-space:nowrap}.today-check.done{border-color:#b9ddbd;background:#edf8ee}.today-check.done small{color:#23713a;font-weight:650}.home-weight-button{grid-column:1/-1}.home-metrics{grid-template-columns:1fr 1fr}.home-metrics .stat-card{min-height:96px}
 .section {
   display: grid;
   gap: 10px;
