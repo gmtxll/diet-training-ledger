@@ -16,13 +16,7 @@
     <header class="app-header"><div><p class="eyebrow" id="today-label"></p><h1>饮食训练本</h1></div><button class="icon-button" id="export-button" aria-label="导出本地数据">⇧</button></header>
     <section id="view-home" class="view active" aria-labelledby="home-title">
       <h2 id="home-title">今日概览</h2>
-      <div class="stats-grid">
-        <article class="stat-card"><span>热量</span><strong id="today-kcal">0</strong><small>kcal</small></article>
-        <article class="stat-card"><span>蛋白质</span><strong id="today-protein">0</strong><small>g</small></article>
-        <article class="stat-card"><span>本月花销</span><strong id="month-expense">¥0</strong><small>食材与补剂</small></article>
-      </div>
-      <article class="card action-card"><div><p class="eyebrow">下一步</p><h3 id="workout-summary">今天还未训练</h3><p>完成一次训练或添加一餐，数据会自动汇总。</p></div><div class="home-actions"><button class="secondary" data-go="food">添加饮食</button><button class="primary" data-go="workout">开始训练</button></div></article>
-      <section class="section"><div class="section-heading"><h3>今日记录</h3><button class="text-button" data-go="food">查看饮食</button></div><div id="today-timeline" class="timeline empty-state">今天还没有记录</div></section>
+      <article class="card today-status-card"><p class="eyebrow">今日完成情况</p><div class="today-checks"><div id="food-summary" class="today-check"><span>🍽️</span><div><strong>饮食</strong><small>未记录</small></div></div><div id="workout-summary" class="today-check"><span>🏃</span><div><strong>训练</strong><small>未完成</small></div></div></div><div class="home-actions"><button class="secondary" data-go="food">添加饮食</button><button class="primary" data-go="workout">开始训练</button></div></article>
     </section>
 
     <section id="view-food" class="view" aria-labelledby="food-title">
@@ -58,6 +52,6 @@
 
   <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">趋势</button><button data-view="expenses">花销</button><button data-view="games">游戏</button></nav>
   <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

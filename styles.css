@@ -125,6 +125,7 @@ h3 {
   padding: 0 12px;
   white-space: nowrap;
 }
+.today-status-card{display:grid;gap:18px}.today-checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.today-check{display:flex;align-items:center;gap:10px;border:1px solid #e3e9e1;border-radius:14px;padding:13px;background:#fafcf9}.today-check>span{font-size:22px}.today-check div{display:grid;gap:2px}.today-check small{color:#7a857d;font-size:12px}.today-check.done{border-color:#b9ddbd;background:#edf8ee}.today-check.done small{color:#23713a;font-weight:650}
 .section {
   display: grid;
   gap: 10px;
