@@ -16,7 +16,7 @@
     <header class="app-header"><div><p class="eyebrow" id="today-label"></p><h1>饮食训练本</h1></div><button class="icon-button" id="export-button" aria-label="导出本地数据">⇧</button></header>
     <section id="view-home" class="view active" aria-labelledby="home-title">
       <h2 id="home-title">今日概览</h2>
-      <article class="card today-status-card"><p class="eyebrow">今日完成情况</p><div class="today-checks"><div id="food-summary" class="today-check"><span>🍽️</span><div><strong>饮食</strong><small>未记录</small></div></div><div id="workout-summary" class="today-check"><span>🏃</span><div><strong>训练</strong><small>未完成</small></div></div></div><div class="home-actions"><button class="secondary" data-go="food">添加饮食</button><button class="primary" data-go="workout">开始训练</button></div></article>
+      <article class="card today-status-card"><p class="eyebrow">今日完成情况</p><div class="today-checks"><div id="food-summary" class="today-check"><span>🍽️</span><div><strong>饮食</strong><small>未记录</small></div></div><div id="workout-summary" class="today-check"><span>🏃</span><div><strong>训练</strong><small>未完成</small></div></div><div id="weight-summary" class="today-check"><span>⚖️</span><div><strong>体重</strong><small>未记录</small></div></div></div><div class="home-actions"><button class="secondary" data-go="food">添加饮食</button><button class="primary" data-go="workout">开始训练</button><button class="secondary home-weight-button" id="home-add-weight">记录体重</button></div></article>
     </section>
 
     <section id="view-food" class="view" aria-labelledby="food-title">
@@ -52,6 +52,6 @@
 
   <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">趋势</button><button data-view="expenses">花销</button><button data-view="games">游戏</button></nav>
   <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
