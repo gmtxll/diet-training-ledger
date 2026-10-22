@@ -78,21 +78,21 @@ $('#add-expense-button').onclick=()=>dialog('记一笔','<label class="form-fiel
 function drawTimer(){const s=timer.seconds, list=state.exercises||[], current=list[timer.exerciseIndex]||{name:'训练完成',target:'保存记录'};$('#timer-display').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#timer-toggle').textContent=timer.running?'暂停':'开始';$('#timer-state').textContent=timer.running?'训练计时中':'准备开始';$('#exercise-name').textContent=`第 ${timer.exerciseIndex+1} 项：${current.name}`;$('#exercise-detail').textContent=`目标 ${current.target} · 共 ${$('#rounds-input').value||3} 轮`;}
 $('#timer-toggle').onclick=()=>{timer.running=!timer.running;if(timer.running)timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);else clearInterval(timer.interval);drawTimer();};$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();};$('#next-exercise').onclick=()=>{timer.exerciseIndex=(timer.exerciseIndex+1)%Math.max(1,(state.exercises||[]).length);timer.seconds=0;drawTimer();};$('#complete-workout').onclick=()=>{const rounds=Math.max(1,Number($('#rounds-input').value)||3);state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,exercises:state.exercises||[],duration:timer.seconds});save();timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();render();};
 $('#export-button').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`饮食训练本-${today()}.json`;a.click();URL.revokeObjectURL(url);};
-let syncTimer;
+let syncTimer, syncUnavailable=false;
+const syncFetch=(url,options={})=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2500);return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer));};
 function serverUrl(){return $('#server-url-input').value.trim().replace(/\/$/,'');}
 function setSyncStatus(message){$('#sync-status').textContent=message;}
-function scheduleSync(){clearTimeout(syncTimer);if(serverUrl())syncTimer=setTimeout(pushToServer,700);}
-async function pushToServer(){const url=serverUrl();if(!url)return;try{setSyncStatus('正在同步到电脑…');const response=await fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
-async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await fetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{setSyncStatus('无法连接电脑服务器');}}
+function scheduleSync(){clearTimeout(syncTimer);if(serverUrl()&&!syncUnavailable)syncTimer=setTimeout(pushToServer,700);}
+async function pushToServer(){const url=serverUrl();if(!url||syncUnavailable)return;try{setSyncStatus('正在同步到电脑…');const response=await syncFetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();syncUnavailable=false;localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{syncUnavailable=true;setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
+async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await syncFetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();syncUnavailable=false;state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{syncUnavailable=true;setSyncStatus('无法连接电脑服务器');}}
 // When opened through Tailscale (or the LAN server), sync back to that same server by default.
 const defaultServerUrl=location.port==='8787'?location.origin:'http://192.168.1.5:8787';
 $('#server-url-input').value=localStorage.getItem('diet-training-server')||defaultServerUrl;
-$('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server',serverUrl());configureNativeAutoSync();setSyncStatus('地址已保存；Android 将在 Wi‑Fi 下自动同步');};
+$('#server-url-input').onchange=()=>{syncUnavailable=false;localStorage.setItem('diet-training-server',serverUrl());configureNativeAutoSync();setSyncStatus('地址已保存；Android 将在 Wi‑Fi 下自动同步');};
 $('#push-server-button')?.remove();
 $('#pull-server-button')?.remove();
 // Keep every local change durable on the computer server, including a final save when the page closes.
 window.addEventListener('pagehide',()=>{const url=serverUrl();if(url)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
-scheduleSync();
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 // Versioned defaults: update only bundled plans, never historical records or custom plans.
 const PLAN_UPDATE_VERSION=2;
@@ -388,7 +388,6 @@ document.addEventListener('click',async event=>{
 render();
 // The computer page and phone page each have their own browser storage.
 // Refresh from the shared server shortly after opening so both screens converge.
-setTimeout(()=>pullFromServer(),1000);
 
 // Header calendar and a compact settings list keep daily controls in one place.
 const calendarButton=document.createElement('button');
