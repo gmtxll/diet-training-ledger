@@ -376,12 +376,13 @@ h3 {
   color: #647067;
   padding: 13px 4px;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   transition:
     background-color 0.18s ease,
     color 0.18s ease,
     transform 0.18s ease;
 }
+.settings-list button:first-child{color:#155d33;background:#f6faf5}
 .tab-bar button:active {
   transform: scale(0.96);
 }

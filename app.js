@@ -69,6 +69,7 @@ function openView(name){
   document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));
   $(`#view-${name}`).classList.add('active');
   document.querySelector(`[data-view="${name}"]`)?.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
   if(name==='trends')setTimeout(pullFromServer,0);
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>openView(b.dataset.go));
@@ -159,6 +160,7 @@ if(syncCard){
   syncCard.querySelector('h3').textContent='自动同步';
   syncCard.querySelector('p').textContent='添加或修改记录后会自动同步；可在顶部头像中设置服务器地址。';
   syncCard.querySelector('label').hidden=true;
+  syncCard.hidden=true;
 }
 const profileStyles=document.createElement('style');
 profileStyles.textContent=`.profile-button{width:38px;height:38px;border:0;border-radius:50%;background:linear-gradient(145deg,#27643b,#5c9b6d);color:#fff;font:700 14px/1 inherit;box-shadow:0 3px 9px rgba(23,101,52,.22);cursor:pointer;flex:0 0 auto}.profile-button:active{transform:scale(.94)}.settings-note{margin:0 0 14px;color:#66736a;font-size:13px;line-height:1.55}.app-toast{position:fixed;z-index:20;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translate(-50%,12px);width:max-content;max-width:calc(100vw - 36px);padding:10px 14px;border-radius:12px;background:rgba(24,43,28,.92);color:#fff;font-size:13px;box-shadow:0 9px 24px rgba(18,35,22,.22);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.app-toast.show{opacity:1;transform:translate(-50%,0)}`;
@@ -435,12 +437,13 @@ function openCalendar(){
   input.onchange=refresh;refresh();
 }
 function openSettingsList(){
-  dialog('\u8bbe\u7f6e',`<p class="settings-note">\u8bb0\u5f55\u4f1a\u81ea\u52a8\u4fdd\u5b58\u5e76\u540c\u6b65\u3002</p><div class="settings-list"><button type="button" id="settings-export">\ud83d\udce5 \u4e0b\u8f7d\u5907\u4efd</button><button type="button" id="settings-import">\ud83d\udce4 \u4e0a\u4f20\u5907\u4efd</button></div><label class="form-field">\u7535\u8111\u670d\u52a1\u5668\u5730\u5740<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="http://100.76.118.55:8787"></label>`,f=>{
+  dialog('\u8bbe\u7f6e',`<p class="settings-note">\u8bb0\u5f55\u4f1a\u81ea\u52a8\u4fdd\u5b58\u5e76\u540c\u6b65\u3002</p><div class="settings-list"><button type="button" id="settings-games">\ud83c\udfae \u6e38\u620f\u8bb0\u5f55</button><button type="button" id="settings-export">\ud83d\udce5 \u4e0b\u8f7d\u5907\u4efd</button><button type="button" id="settings-import">\ud83d\udce4 \u4e0a\u4f20\u5907\u4efd</button></div><label class="form-field">\u7535\u8111\u670d\u52a1\u5668\u5730\u5740<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label>`,f=>{
     const url=String(f.get('serverUrl')||'').trim().replace(/\/$/,'');
     $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
     if(url){scheduleSync();setSyncStatus('\u81ea\u52a8\u540c\u6b65\u5df2\u5f00\u542f');}else setSyncStatus('\u4ec5\u4fdd\u5b58\u5230\u672c\u673a');
   });
   $('#settings-export').onclick=()=>$('#export-button').click();
+  $('#settings-games').onclick=()=>{$('#entry-dialog').close();openView('games');};
   $('#settings-import').onclick=()=>$('#import-backup-file').click();
 }
 calendarButton.onclick=openCalendar;
