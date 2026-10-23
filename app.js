@@ -25,7 +25,10 @@ const latestExercises=[
   {name:'\u81c0\u6865',target:'12\u201320 \u6b21'},
   {name:'\u4f11\u606f',target:'45 \u79d2',isRest:true},
   {name:'\u5e73\u677f\u652f\u6491',target:'45\u201360 \u79d2'},
+  {name:'\u53cd\u5411\u5377\u8179',target:'12\u201315 \u6b21'},
   {name:'\u5377\u8179',target:'25\u201330 \u6b21'},
+  {name:'\u4fa7\u5e73\u677f\u652f\u6491\uff08\u5de6\uff09',target:'30\u201345 \u79d2'},
+  {name:'\u4fa7\u5e73\u677f\u652f\u6491\uff08\u53f3\uff09',target:'30\u201345 \u79d2'},
   {name:'\u4f11\u606f',target:'60 \u79d2',isRest:true}
 ];
 const clonePlanItems=(items)=>JSON.parse(JSON.stringify(items));
@@ -109,14 +112,14 @@ $('#pull-server-button')?.remove();
 window.addEventListener('pagehide',()=>{const url=serverUrl();if(url)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 // Versioned defaults: update only bundled plans, never historical records or custom plans.
-const PLAN_UPDATE_VERSION=3;
+const PLAN_UPDATE_VERSION=4;
 if((state.planUpdateVersion||0)<PLAN_UPDATE_VERSION){
   let defaultMeal=state.mealPlans.find(x=>x.id==='default-meal');
   if(!defaultMeal){defaultMeal={id:'default-meal',name:'\u51cf\u8102\u57fa\u7840\u914d\u65b9',items:clonePlanItems(latestFoods)};state.mealPlans.unshift(defaultMeal);}
   else {defaultMeal.name='\u51cf\u8102\u57fa\u7840\u914d\u65b9';defaultMeal.items=clonePlanItems(latestFoods);}
   let defaultWorkout=state.workoutPlans.find(x=>x.id==='default-workout');
-  if(!defaultWorkout){defaultWorkout={id:'default-workout',name:'\u51cf\u8102\u529b\u91cf\u5faa\u73af',items:clonePlanItems(latestExercises)};state.workoutPlans.unshift(defaultWorkout);}
-  else {defaultWorkout.name='\u51cf\u8102\u529b\u91cf\u5faa\u73af';defaultWorkout.items=clonePlanItems(latestExercises);}
+  if(!defaultWorkout){defaultWorkout={id:'default-workout',name:'\u8179\u808c\u51cf\u8102\u5faa\u73af',items:clonePlanItems(latestExercises)};state.workoutPlans.unshift(defaultWorkout);}
+  else {defaultWorkout.name='\u8179\u808c\u51cf\u8102\u5faa\u73af';defaultWorkout.items=clonePlanItems(latestExercises);}
   if(state.activeMealPlan==='default-meal')state.draftFoods=defaultMeal.items;
   const activeWorkout=state.workoutPlans.find(x=>x.id===state.activeWorkoutPlan);
   if(activeWorkout){activeWorkout.items=clonePlanItems(latestExercises);state.exercises=activeWorkout.items;}

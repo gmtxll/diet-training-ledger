@@ -1,5 +1,5 @@
-const CACHE = 'diet-training-shell-v34';
-const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=34','./manifest.webmanifest'];
+const CACHE = 'diet-training-shell-v35';
+const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=35','./manifest.webmanifest'];
 
 async function refreshAsset(cache, url){
   const response = await fetch(url, {cache:'reload'});
