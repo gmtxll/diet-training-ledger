@@ -261,6 +261,7 @@ h3 {
   background: white;
   font: inherit;
 }
+.training-inputs{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.training-inputs .compact-input{white-space:nowrap}.training-inputs .compact-input input{width:50px}
 .exercise-list p {
   display: grid;
   grid-template-columns: 30px 1fr auto;
