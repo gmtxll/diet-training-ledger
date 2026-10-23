@@ -46,7 +46,8 @@ if(!Array.isArray(state.savings))state.savings=[];
 state.draftFoods ||= clonePlanItems(latestFoods);
 state.difficultyLevel=Math.min(5,Math.max(1,Number(state.difficultyLevel)||3));
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
-const save = () => { state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
+function syncActivePlanItems(){const mealPlan=state.mealPlans?.find(plan=>plan.id===state.activeMealPlan),workoutPlan=state.workoutPlans?.find(plan=>plan.id===state.activeWorkoutPlan);if(mealPlan&&Array.isArray(state.draftFoods))mealPlan.items=clonePlanItems(state.draftFoods);if(workoutPlan&&Array.isArray(state.exercises))workoutPlan.items=clonePlanItems(state.exercises);}
+const save = () => { syncActivePlanItems();state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
 const fmt = (n) => Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
 const money = (n) => `¥${Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2})}`;
 function calcMeal(items=state.draftFoods){return items.reduce((a,f)=>({kcal:a.kcal+f.grams*f.kcal/100,protein:a.protein+f.grams*f.protein/100,fiber:a.fiber+f.grams*f.fiber/100}),{kcal:0,protein:0,fiber:0});}
@@ -242,6 +243,12 @@ document.addEventListener('click',e=>{
     state.draftFoods.splice(Number(foodIndex),1);
     save();render();
   }
+  const editFoodIndex=e.target.dataset.editFood;
+  if(editFoodIndex!==undefined){
+    const item=state.draftFoods[Number(editFoodIndex)];
+    dialog('编辑食材',`<label class="form-field">名称<input name="name" value="${item.name}" required></label><label class="form-field">每 100g 热量（kcal）<input name="kcal" type="number" min="0" value="${item.kcal}" required></label><label class="form-field">每 100g 蛋白质（g）<input name="protein" type="number" min="0" value="${item.protein}" required></label><label class="form-field">每 100g 纤维（g）<input name="fiber" type="number" min="0" value="${item.fiber||0}" required></label><label class="form-field">用量（g）<input name="grams" type="number" min="0" value="${item.grams}" required></label>`,f=>{Object.assign(item,{name:f.get('name'),kcal:Number(f.get('kcal')),protein:Number(f.get('protein')),fiber:Number(f.get('fiber')),grams:Number(f.get('grams'))});save();render();});
+    return;
+  }
   const exerciseIndex=e.target.dataset.editExercise;
   if(exerciseIndex!==undefined){
     const item=state.exercises[Number(exerciseIndex)];
@@ -255,15 +262,20 @@ document.addEventListener('click',e=>{
 const originalScopedRecords=renderScopedRecords;
 renderScopedRecords=function(){
   originalScopedRecords();
-  // Food is managed as one editable list; meal-plan controls are intentionally hidden.
-  $('#meal-plan-select').parentElement.hidden=true;
+  $('#meal-plan-select').parentElement.hidden=false;
   $$('#meal-items .item-row').forEach((row,index)=>{
     if(row.querySelector('[data-delete-food]'))return;
+    const edit=document.createElement('button');
+    edit.className='text-button';
+    edit.type='button';
+    edit.textContent='编辑';
+    edit.dataset.editFood=index;
     const button=document.createElement('button');
     button.className='text-button';
     button.type='button';
     button.textContent='\u5220\u9664';
     button.dataset.deleteFood=index;
+    row.append(edit);
     row.append(button);
   });
   $$('#exercise-list [data-delete-exercise]').forEach(button=>{
