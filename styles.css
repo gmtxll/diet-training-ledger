@@ -261,7 +261,7 @@ h3 {
   background: white;
   font: inherit;
 }
-.training-inputs{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.training-inputs .compact-input{white-space:nowrap}.training-inputs .compact-input input{width:50px}
+.training-inputs{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}.training-inputs .compact-input{white-space:nowrap}.training-inputs .compact-input input,.training-inputs .compact-input select{width:86px}.exercise-list p{display:flex;align-items:center;gap:8px}.exercise-list p>span:not(.exercise-actions){flex:0 0 30px}.exercise-list p>strong{flex:1;font-weight:500}.exercise-list p>b{white-space:nowrap}.exercise-actions{display:flex;align-items:center;gap:1px;flex:0 0 auto}.exercise-actions .text-button{padding:5px}.rest-exercise{background:#f5f8f5;border-radius:10px;padding:8px!important;margin:5px 0}
 .exercise-list p {
   display: grid;
   grid-template-columns: 30px 1fr auto;
