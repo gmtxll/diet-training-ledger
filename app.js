@@ -20,10 +20,13 @@ const latestFoods=[
 const latestExercises=[
   {name:'\u6df1\u8e72',target:'25\u201330 \u6b21'},
   {name:'\u4fef\u5367\u6491',target:'10\u201315 \u6b21\uff08\u529b\u7aed\u524d\u505c\uff09'},
+  {name:'\u4f11\u606f',target:'45 \u79d2',isRest:true},
   {name:'\u5f39\u529b\u5e26\u5212\u8239',target:'10\u201315 \u6b21'},
   {name:'\u81c0\u6865',target:'12\u201320 \u6b21'},
+  {name:'\u4f11\u606f',target:'45 \u79d2',isRest:true},
   {name:'\u5e73\u677f\u652f\u6491',target:'45\u201360 \u79d2'},
-  {name:'\u5377\u8179',target:'25\u201330 \u6b21'}
+  {name:'\u5377\u8179',target:'25\u201330 \u6b21'},
+  {name:'\u4f11\u606f',target:'60 \u79d2',isRest:true}
 ];
 const clonePlanItems=(items)=>JSON.parse(JSON.stringify(items));
 const initial = { meals:[], workouts:[], weights:[], expenses:[], height:163, draftFoods:clonePlanItems(latestFoods) };
@@ -105,7 +108,7 @@ $('#pull-server-button')?.remove();
 window.addEventListener('pagehide',()=>{const url=serverUrl();if(url)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 // Versioned defaults: update only bundled plans, never historical records or custom plans.
-const PLAN_UPDATE_VERSION=2;
+const PLAN_UPDATE_VERSION=3;
 if((state.planUpdateVersion||0)<PLAN_UPDATE_VERSION){
   let defaultMeal=state.mealPlans.find(x=>x.id==='default-meal');
   if(!defaultMeal){defaultMeal={id:'default-meal',name:'\u51cf\u8102\u57fa\u7840\u914d\u65b9',items:clonePlanItems(latestFoods)};state.mealPlans.unshift(defaultMeal);}
@@ -114,7 +117,8 @@ if((state.planUpdateVersion||0)<PLAN_UPDATE_VERSION){
   if(!defaultWorkout){defaultWorkout={id:'default-workout',name:'\u51cf\u8102\u529b\u91cf\u5faa\u73af',items:clonePlanItems(latestExercises)};state.workoutPlans.unshift(defaultWorkout);}
   else {defaultWorkout.name='\u51cf\u8102\u529b\u91cf\u5faa\u73af';defaultWorkout.items=clonePlanItems(latestExercises);}
   if(state.activeMealPlan==='default-meal')state.draftFoods=defaultMeal.items;
-  if(state.activeWorkoutPlan==='default-workout')state.exercises=defaultWorkout.items;
+  const activeWorkout=state.workoutPlans.find(x=>x.id===state.activeWorkoutPlan);
+  if(activeWorkout){activeWorkout.items=clonePlanItems(latestExercises);state.exercises=activeWorkout.items;}
   state.planUpdateVersion=PLAN_UPDATE_VERSION;
   save();
 }
