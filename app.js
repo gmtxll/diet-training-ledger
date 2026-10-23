@@ -38,7 +38,7 @@ if(!Array.isArray(state.expenses))state.expenses=[];
 if(!Array.isArray(state.games))state.games=[];
 if(!Array.isArray(state.savings))state.savings=[];
 state.draftFoods ||= clonePlanItems(latestFoods);
-state.difficultyLevel=Number(state.difficultyLevel)===5?5:3;
+state.difficultyLevel=Math.min(5,Math.max(1,Number(state.difficultyLevel)||3));
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
 const save = () => { state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
 const fmt = (n) => Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
@@ -76,12 +76,12 @@ $('#add-weight-button').onclick=()=>dialog('记录体重','<label class="form-fi
 $('#home-add-weight').onclick=()=>$('#add-weight-button').click();
 $('#height-input').onchange=e=>{state.height=Number(e.target.value)||null;save();renderTrends();};
 $('#add-expense-button').onclick=()=>dialog('记一笔','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">类型<select name="type"><option value="expense">花销</option><option value="income">存钱/收入</option></select></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">分类<select name="category"><option>食材</option><option>补剂</option><option>其他</option></select></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',f=>{state.expenses.unshift({id:crypto.randomUUID(),name:f.get('name'),type:f.get('type'),amount:Number(f.get('amount')),category:f.get('category'),date:f.get('date')});save();render();});
-function difficultyLevel(){return Number(state.difficultyLevel)===5?5:3;}
+function difficultyLevel(){return Math.min(5,Math.max(1,Number(state.difficultyLevel)||3));}
 function adjustedTarget(target){const level=difficultyLevel(),step=level-3,seconds=String(target).includes('秒'),amount=seconds?5:2;return String(target).replace(/\d+/g,value=>String(Math.max(1,Number(value)+step*amount)));}
-function updateDifficultyUI(){const level=difficultyLevel(),input=$('#difficulty-input'),note=$('#difficulty-note');if(input)input.value=level;if(note)note.textContent=level===3?'标准难度：按方案原始次数训练':'进阶难度：每项增加约 4 次或 10 秒';}
+function updateDifficultyUI(){const level=difficultyLevel(),input=$('#difficulty-input'),note=$('#difficulty-note'),delta=level-3;if(input)input.value=level;if(note)note.textContent=delta===0?'标准难度：按方案原始次数训练':`${level<3?'降低':'提高'}难度：每级${level<3?'减少':'增加'}约 2 次或 5 秒`;}
 function displayTarget(item){return item?.isRest?item.target:adjustedTarget(item?.target||'');}
 function drawTimer(){const s=timer.seconds, list=state.exercises||[], current=list[timer.exerciseIndex]||{name:'训练完成',target:'保存记录'};$('#timer-display').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#timer-toggle').textContent=timer.running?'暂停':'开始';$('#timer-state').textContent=timer.running?'训练计时中':'准备开始';$('#exercise-name').textContent=`第 ${timer.exerciseIndex+1} 项：${current.name}`;$('#exercise-detail').textContent=`目标 ${displayTarget(current)} · 共 ${$('#rounds-input').value||3} 轮`;}
-$('#difficulty-input').onchange=e=>{state.difficultyLevel=Number(e.target.value)===5?5:3;updateDifficultyUI();drawTimer();renderExtras();save();};
+$('#difficulty-input').onchange=e=>{state.difficultyLevel=Math.min(5,Math.max(1,Number(e.target.value)||3));updateDifficultyUI();drawTimer();renderExtras();save();};
 function startTimer(){if(timer.running)return;timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
 $('#timer-toggle').onclick=()=>{if(timer.running){timer.running=false;clearInterval(timer.interval);}else startTimer();drawTimer();};$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();};$('#next-exercise').onclick=()=>{timer.exerciseIndex=(timer.exerciseIndex+1)%Math.max(1,(state.exercises||[]).length);timer.seconds=0;startTimer();drawTimer();};$('#complete-workout').onclick=()=>{const rounds=Math.max(1,Number($('#rounds-input').value)||3);state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});save();timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();render();};
 $('#export-button').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`饮食训练本-${today()}.json`;a.click();URL.revokeObjectURL(url);};
