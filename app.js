@@ -59,7 +59,7 @@ function renderFood(){const list=$('#meal-items');list.innerHTML='';state.draftF
 function renderHome(){const ate=todayMeals().length>0,worked=state.workouts.some(x=>x.date===today()),todayWeight=state.weights.filter(x=>x.date===today()).at(-1);$('#month-expense').textContent=money(expensesThisMonth().reduce((sum,item)=>sum+Number(item.amount||0),0));$('#today-weight').textContent=todayWeight?`${fmt(todayWeight.value)} kg`:'—';$('#today-weight-note').textContent=todayWeight?'今日已记录':'尚未记录';const setStatus=(id,done,doneText,todoText)=>{const el=$(id);if(!el)return;el.classList.toggle('done',done);el.querySelector('small').textContent=done?doneText:todoText;};setStatus('#food-summary',ate,'已记录','未记录');setStatus('#workout-summary',worked,'已完成','未完成');}
 function renderTrends(){const weights=[...state.weights].sort((a,b)=>a.date.localeCompare(b.date));const latest=weights.at(-1);$('#latest-weight').textContent=latest?fmt(latest.value):'—';const bmi=latest&&state.height?latest.value/((state.height/100)**2):null;$('#bmi-value').textContent=bmi?fmt(bmi):'—';$('#height-caption').textContent=state.height?`身高 ${state.height} cm`:'请设置身高';$('#height-input').value=state.height||'';if(!weights.length){$('#weight-chart').className='weight-chart empty-state';$('#weight-chart').textContent='记录体重后显示趋势';return}const min=Math.min(...weights.map(x=>x.value)),max=Math.max(...weights.map(x=>x.value)),span=Math.max(max-min,.4);$('#weight-chart').className='weight-chart';$('#weight-chart').innerHTML=weights.slice(-8).map(x=>`<div class="weight-bar" style="height:${35+((x.value-min)/span)*60}px"><b>${fmt(x.value)}</b><span>${x.date.slice(5)}</span></div>`).join('');}
 function renderExpenses(){const expenses=expensesThisMonth(), total=expenses.reduce((a,x)=>a+x.amount,0), food=expenses.filter(x=>x.category==='食材').reduce((a,x)=>a+x.amount,0);$('#expense-total').textContent=money(total);$('#food-expense').textContent=money(food); const cats=['食材','补剂','其他'];$('#expense-breakdown').innerHTML=cats.map(c=>{const n=expenses.filter(x=>x.category===c).reduce((a,x)=>a+x.amount,0);return `<div class="breakdown-row"><span>${c}</span><div class="bar"><i style="width:${total?n/total*100:0}%"></i></div><b>${money(n)}</b></div>`}).join('');$('#expense-history').innerHTML=state.expenses.length?state.expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(x=>`<div class="history-row"><div><p>${x.name}</p><small>${x.date} · ${x.category}</small></div><strong>${money(x.amount)}</strong></div>`).join(''):'暂无花销记录';}
-function renderWorkouts(){ $('#workout-history').innerHTML=state.workouts.length?state.workouts.slice(0,8).map(x=>`<div class="history-row"><div><p>🏃 ${x.exercises?.length?'自定义训练':'自重循环'}</p><small>${x.date} · ${x.rounds} 轮</small></div><button class="text-button" data-delete="workouts:${x.id}">删除</button></div>`).join(''):'暂无训练记录';}
+function renderWorkouts(){ $('#workout-history').innerHTML=state.workouts.length?state.workouts.slice(0,8).map(x=>`<div class="history-row"><div><p>${x.restDay?'🌿 今日休息':`🏃 ${x.exercises?.length?'自定义训练':'自重循环'}`}</p><small>${x.restDay?x.date:`${x.date} · ${x.rounds} 轮`}</small></div><button class="text-button" data-delete="workouts:${x.id}">删除</button></div>`).join(''):'暂无训练记录';}
 function render(){renderHome();renderFood();renderTrends();renderExpenses();renderWorkouts();renderExtras();}
 function dialog(title,fields,onSave){$('#dialog-title').textContent=title;$('#dialog-fields').innerHTML=fields;const d=$('#entry-dialog');d.showModal();const form=$('#entry-form');form.onsubmit=(e)=>{e.preventDefault();onSave(new FormData(form));d.close();};}
 document.addEventListener('input',(e)=>{if(e.target.matches('[data-food]')){state.draftFoods[e.target.dataset.food].grams=Math.max(0,Number(e.target.value)||0);save();const t=calcMeal();$('#meal-total').textContent=`${fmt(t.kcal)} kcal · ${fmt(t.protein)} g 蛋白质 · ${fmt(t.fiber)} g 纤维`;}});
@@ -469,7 +469,8 @@ renderHome=function(){
   const setStatus=(id,done,doneText,todoText)=>{const card=$(id);card.classList.toggle('done',done);card.querySelector('small').textContent=done?doneText:todoText;};
   setStatus('#lunch-summary',state.meals.some(item=>item.date===today()&&item.name==='午餐'),'已记录','未记录');
   setStatus('#dinner-summary',state.meals.some(item=>item.date===today()&&item.name==='晚餐'),'已记录','未记录');
-  setStatus('#workout-summary',state.workouts.some(item=>item.date===today()),'已完成','未完成');
+  const todayWorkout=state.workouts.find(item=>item.date===today());
+  setStatus('#workout-summary',Boolean(todayWorkout),todayWorkout?.restDay?'已休息':'已完成','未完成');
   setStatus('#expense-summary',todayExpenses().length>0,'已记录','未记录');
 };
 $('#save-meal-button').onclick=()=>{const totals=calcMeal(),plan=state.mealPlans.find(item=>item.id===state.activeMealPlan);state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:plan?.name||'饮食',...totals});save();render();};
@@ -582,7 +583,8 @@ renderHome=function(){
   const setStatus=(id,done,doneText,todoText)=>{const el=$(id);el.classList.toggle('done',done);el.querySelector('small').textContent=done?doneText:todoText;};
   setStatus('#lunch-summary',state.meals.some(item=>item.date===today()&&item.name==='午餐'),'已记录','未记录');
   setStatus('#dinner-summary',state.meals.some(item=>item.date===today()&&item.name==='晚餐'),'已记录','未记录');
-  setStatus('#workout-summary',state.workouts.some(item=>item.date===today()),'已完成','未完成');
+  const todayWorkout=state.workouts.find(item=>item.date===today());
+  setStatus('#workout-summary',Boolean(todayWorkout),todayWorkout?.restDay?'已休息':'已完成','未完成');
   setStatus('#expense-summary',todayExpenses().length>0,'已记录','未记录');
 };
 renderExpenses=function(){
@@ -614,6 +616,10 @@ renderExpenses=function(){
 };
 $('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{state.expenses.unshift({id:crypto.randomUUID(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();});
 $('#home-add-expense').onclick=()=>$('#add-expense-button').click();
+$('#mark-rest-day').onclick=()=>{
+  state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),restDay:true});
+  save();render();showToast('已记录今日休息');
+};
 state.dailyExpenseLimit ??=15;
 const spendingStyles=document.createElement('style');
 spendingStyles.textContent='.home-expense-card,.editable-budget-card{cursor:pointer}.home-expense-card:active,.editable-budget-card:active{transform:scale(.98);background:#f8fcf8}';
