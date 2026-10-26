@@ -525,17 +525,16 @@ renderExpenses=function(){
   availableCard.querySelector('span').textContent='今日还可花';
   $('#food-expense').textContent=money(budget.available);
   availableCard.querySelector('small').textContent=`每日额度 ${money(budget.limit)}`;
-  const categories=['食材','补剂','其他'];
-  $('#expense-breakdown').innerHTML=categories.map(category=>{const amount=spendingTotal(expenses.filter(item=>item.category===category));return `<div class="breakdown-row"><span>${category}</span><div class="bar"><i style="width:${total?amount/total*100:0}%"></i></div><b>${money(amount)}</b></div>`;}).join('');
   let setting=$('#daily-budget-setting');
-  if(!setting){setting=document.createElement('article');setting.id='daily-budget-setting';setting.className='card settings-card';$('#expense-breakdown').closest('.card').after(setting);}
+  if(!setting){setting=document.createElement('article');setting.id='daily-budget-setting';setting.className='card settings-card';$('#expense-total').closest('.stats-grid').after(setting);}
   setting.innerHTML=`<div class="section-heading"><h3>每日可花额度</h3><label class="compact-input">¥ <input id="daily-limit-input" type="number" min="0" step="1" value="${budget.limit}"></label></div><p>今天还可花 ${money(budget.available)}。未花完会累积到明天，超支会从后续额度扣除。</p>`;
   $('#daily-limit-input').onchange=event=>{state.dailyExpenseLimit=Math.max(0,Number(event.target.value)||0);save();render();};
-  const rows=expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(item=>`<div class="history-row"><div><p>${item.name}</p><small>${item.date} · ${item.category}</small></div><strong>${money(item.amount)}</strong><button class="text-button" data-delete="expenses:${item.id}">删除</button></div>`).join('');
+  const rows=expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(item=>`<div class="history-row"><div><p>${item.name}</p><small>${item.date}</small></div><strong>${money(item.amount)}</strong><button class="text-button" data-delete="expenses:${item.id}">删除</button></div>`).join('');
   $('#expense-history').innerHTML=rows||'<p class="empty-state">暂无消费记录</p>';
   $('#saving-list')?.closest('.card')?.remove();
 };
-$('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">分类<select name="category"><option>食材</option><option>补剂</option><option>其他</option></select></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{state.expenses.unshift({id:crypto.randomUUID(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),category:form.get('category'),date:form.get('date')});save();render();});
+$('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{state.expenses.unshift({id:crypto.randomUUID(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();});
+$('#home-add-expense').onclick=()=>$('#add-expense-button').click();
 state.dailyExpenseLimit ??=15;
 const spendingStyles=document.createElement('style');
 spendingStyles.textContent='.home-expense-card{cursor:pointer}.home-expense-card:active{transform:scale(.98);background:#f8fcf8}';
