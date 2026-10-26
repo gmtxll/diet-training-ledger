@@ -42,10 +42,9 @@
     </section>
 
     <section id="view-expenses" class="view" aria-labelledby="expenses-title">
-      <div class="section-heading"><div><p class="eyebrow">记账</p><h2 id="expenses-title">收支与存钱</h2></div><button class="text-button" id="add-expense-button">＋ 记一笔</button></div>
-      <div class="stats-grid"><article class="stat-card"><span>本月总额</span><strong id="expense-total">¥0</strong><small>当前月份</small></article><article class="stat-card"><span>食材</span><strong id="food-expense">¥0</strong><small>本月</small></article></div>
+      <div class="section-heading"><div><p class="eyebrow">消费</p><h2 id="expenses-title">消费记录</h2></div><button class="text-button" id="add-expense-button">＋ 记录消费</button></div>
+      <div class="stats-grid"><article class="stat-card"><span>当前消费</span><strong id="expense-total">¥0</strong><small>今天已消费</small></article><article class="stat-card"><span>今日还可花</span><strong id="food-expense">¥0</strong><small>每日额度 ¥15</small></article></div>
       <article class="card"><h3>分类</h3><div id="expense-breakdown" class="breakdown"></div></article>
-      <article class="card"><div class="section-heading"><h3>存钱计划</h3><button class="text-button" id="add-saving-button">＋ 添加</button></div><div id="saving-list" class="history-list empty-state">暂无存钱计划</div></article>
       <section class="section"><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
     </section>
     <section id="view-games" class="view" aria-labelledby="games-title"><div class="section-heading"><div><p class="eyebrow">游戏</p><h2 id="games-title">游戏记录</h2></div><button class="text-button" id="add-game-button">＋ 添加游戏</button></div><article class="card"><h3>当前游玩</h3><div id="playing-games" class="history-list empty-state">暂无正在玩的游戏</div></article><article class="card"><h3>已游玩</h3><div id="finished-games" class="history-list empty-state">暂无已游玩游戏</div></article><article class="card"><h3>全部记录</h3><div id="record-list" class="history-list empty-state">暂无记录</div></article></section>
@@ -53,6 +52,6 @@
 
   <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">身体</button><button data-view="expenses">记账</button></nav>
   <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>

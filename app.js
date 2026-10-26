@@ -148,7 +148,7 @@ document.addEventListener('click',e=>{const id=e.target.dataset.delete;if(id){co
 $('#add-exercise-button').onclick=()=>dialog('添加训练动作','<label class="form-field">动作名称<input name="name" required></label><label class="form-field">数量/时长<input name="target" required placeholder="例如 12 次"></label>',f=>{state.exercises.push({name:f.get('name'),target:f.get('target')});save();render();});
 $('#add-game-button').onclick=()=>dialog('添加游戏','<label class="form-field">游戏名称<input name="name" required></label><label class="form-field">状态<select name="status"><option value="playing">正在游玩</option><option value="finished">已游玩</option></select></label>',f=>{state.games.unshift({id:crypto.randomUUID(),name:f.get('name'),status:f.get('status'),date:today()});save();render();});
 $('#meal-plan-select').onchange=e=>{state.activeMealPlan=e.target.value;state.draftFoods=state.mealPlans.find(x=>x.id===e.target.value).items;save();render();};$('#workout-plan-select').onchange=e=>{state.activeWorkoutPlan=e.target.value;state.exercises=state.workoutPlans.find(x=>x.id===e.target.value).items;save();render();};$('#add-meal-plan').onclick=()=>dialog('新建饮食方案','<label class="form-field">方案名称<input name="name" required></label>',f=>{const x={id:crypto.randomUUID(),name:f.get('name'),items:JSON.parse(JSON.stringify(state.draftFoods))};state.mealPlans.push(x);state.activeMealPlan=x.id;state.draftFoods=x.items;save();render();});$('#add-workout-plan').onclick=()=>dialog('新建训练方案','<label class="form-field">方案名称<input name="name" required></label>',f=>{const x={id:crypto.randomUUID(),name:f.get('name'),items:JSON.parse(JSON.stringify(state.exercises))};state.workoutPlans.push(x);state.activeWorkoutPlan=x.id;state.exercises=x.items;save();render();});
-$('#add-saving-button').onclick=()=>dialog('添加存钱计划','<label class="form-field">计划名称<input name="name" required></label><label class="form-field">目标金额（元）<input name="target" type="number" min="1" required></label>',f=>{state.savings.unshift({id:crypto.randomUUID(),name:f.get('name'),target:Number(f.get('target'))});save();render();});
+if($('#add-saving-button'))$('#add-saving-button').onclick=()=>dialog('添加存钱计划','<label class="form-field">计划名称<input name="name" required></label><label class="form-field">目标金额（元）<input name="target" type="number" min="1" required></label>',f=>{state.savings.unshift({id:crypto.randomUUID(),name:f.get('name'),target:Number(f.get('target'))});save();render();});
 $('#today-label').textContent=new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');render();drawTimer();
 
 // The profile button keeps settings out of the day-to-day recording flow.
@@ -459,7 +459,7 @@ function dateRecordRows(date){
   const meals=state.meals.filter(x=>x.date===date).map(x=>row('\ud83c\udf7d\ufe0f',x.name||'\u996e\u98df',`${fmt(x.kcal||0)} kcal`));
   const workouts=state.workouts.filter(x=>x.date===date).map(x=>row('\ud83c\udfc3',x.exercises?.length?'\u8bad\u7ec3':'\u8bad\u7ec3\u8bb0\u5f55',`${x.rounds||0} \u8f6e`));
   const weights=state.weights.filter(x=>x.date===date).map(x=>row('\u2696\ufe0f','\u4f53\u91cd',`${fmt(x.value)} kg`));
-  const expenses=state.expenses.filter(x=>x.date===date).map(x=>row(x.type==='income'?'\ud83d\udcb0':'\ud83e\uddfe',x.name||'\u8bb0\u8d26',money(x.amount||0)));
+  const expenses=state.expenses.filter(x=>x.type!=='income'&&x.date===date).map(x=>row('\ud83e\uddfe',x.name||'\u6d88\u8d39',money(x.amount||0)));
   return [...meals,...workouts,...weights,...expenses];
 }
 function openCalendar(){
@@ -487,3 +487,57 @@ $('#import-backup-button').hidden=true;
 const settingsListStyles=document.createElement('style');
 settingsListStyles.textContent=`.calendar-button{font-size:20px}.settings-list{display:grid;border:1px solid #e4ebe2;border-radius:12px;overflow:hidden;margin:12px 0}.settings-list button{border:0;border-bottom:1px solid #e4ebe2;background:#fff;padding:13px 12px;text-align:left;font:inherit;color:#1f4729;font-weight:650}.settings-list button:last-child{border-bottom:0}.settings-list button:active{background:#f1f7f0}`;
 document.head.append(settingsListStyles);
+
+// Spending is intentionally kept lightweight: only purchases and a rolling daily allowance.
+function currentMonthExpenses(){return state.expenses.filter(item=>item.type!=='income'&&item.date.startsWith(month()));}
+function todayExpenses(){return state.expenses.filter(item=>item.type!=='income'&&item.date===today());}
+function spendingTotal(items){return items.reduce((sum,item)=>sum+Number(item.amount||0),0);}
+function dailyBudgetStatus(){
+  const limit=Math.max(0,Number(state.dailyExpenseLimit)||15);
+  const elapsed=Number(today().slice(8));
+  const spent=spendingTotal(currentMonthExpenses().filter(item=>item.date<=today()));
+  return {limit,spent,available:limit*elapsed-spent};
+}
+renderHome=function(){
+  const ate=todayMeals().length>0,worked=state.workouts.some(item=>item.date===today()),todayWeight=state.weights.filter(item=>item.date===today()).at(-1);
+  const budget=dailyBudgetStatus(),spent=spendingTotal(todayExpenses());
+  const expenseCard=$('#month-expense').closest('.stat-card');
+  expenseCard.classList.add('home-expense-card');
+  expenseCard.setAttribute('role','button');
+  expenseCard.setAttribute('tabindex','0');
+  expenseCard.querySelector('span').textContent='今日消费';
+  $('#month-expense').textContent=money(spent);
+  expenseCard.querySelector('small').textContent=`今日还可花 ${money(budget.available)}`;
+  expenseCard.onclick=()=>openView('expenses');
+  expenseCard.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openView('expenses');}};
+  $('#today-weight').textContent=todayWeight?`${fmt(todayWeight.value)} kg`:'—';
+  $('#today-weight-note').textContent=todayWeight?'今日已记录':'尚未记录';
+  const setStatus=(id,done,doneText,todoText)=>{const el=$(id);el.classList.toggle('done',done);el.querySelector('small').textContent=done?doneText:todoText;};
+  setStatus('#food-summary',ate,'已记录','未记录');setStatus('#workout-summary',worked,'已完成','未完成');
+};
+renderExpenses=function(){
+  const expenses=currentMonthExpenses(),total=spendingTotal(expenses),todayTotal=spendingTotal(todayExpenses()),budget=dailyBudgetStatus();
+  const totalCard=$('#expense-total').closest('.stat-card');
+  totalCard.querySelector('span').textContent='当前消费';
+  $('#expense-total').textContent=money(todayTotal);
+  totalCard.querySelector('small').textContent='今天已消费';
+  const availableCard=$('#food-expense').closest('.stat-card');
+  availableCard.querySelector('span').textContent='今日还可花';
+  $('#food-expense').textContent=money(budget.available);
+  availableCard.querySelector('small').textContent=`每日额度 ${money(budget.limit)}`;
+  const categories=['食材','补剂','其他'];
+  $('#expense-breakdown').innerHTML=categories.map(category=>{const amount=spendingTotal(expenses.filter(item=>item.category===category));return `<div class="breakdown-row"><span>${category}</span><div class="bar"><i style="width:${total?amount/total*100:0}%"></i></div><b>${money(amount)}</b></div>`;}).join('');
+  let setting=$('#daily-budget-setting');
+  if(!setting){setting=document.createElement('article');setting.id='daily-budget-setting';setting.className='card settings-card';$('#expense-breakdown').closest('.card').after(setting);}
+  setting.innerHTML=`<div class="section-heading"><h3>每日可花额度</h3><label class="compact-input">¥ <input id="daily-limit-input" type="number" min="0" step="1" value="${budget.limit}"></label></div><p>今天还可花 ${money(budget.available)}。未花完会累积到明天，超支会从后续额度扣除。</p>`;
+  $('#daily-limit-input').onchange=event=>{state.dailyExpenseLimit=Math.max(0,Number(event.target.value)||0);save();render();};
+  const rows=expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(item=>`<div class="history-row"><div><p>${item.name}</p><small>${item.date} · ${item.category}</small></div><strong>${money(item.amount)}</strong><button class="text-button" data-delete="expenses:${item.id}">删除</button></div>`).join('');
+  $('#expense-history').innerHTML=rows||'<p class="empty-state">暂无消费记录</p>';
+  $('#saving-list')?.closest('.card')?.remove();
+};
+$('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">分类<select name="category"><option>食材</option><option>补剂</option><option>其他</option></select></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{state.expenses.unshift({id:crypto.randomUUID(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),category:form.get('category'),date:form.get('date')});save();render();});
+state.dailyExpenseLimit ??=15;
+const spendingStyles=document.createElement('style');
+spendingStyles.textContent='.home-expense-card{cursor:pointer}.home-expense-card:active{transform:scale(.98);background:#f8fcf8}';
+document.head.append(spendingStyles);
+render();
