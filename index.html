@@ -17,7 +17,7 @@
     <section id="view-home" class="view active" aria-labelledby="home-title">
       <h2 id="home-title">今日概览</h2>
       <div class="stats-grid home-metrics"><article class="stat-card expense-overview"><span>本月花销</span><strong id="month-expense">¥0</strong><small>不含收入与存钱</small></article><article class="stat-card expense-overview"><span>今日体重</span><strong id="today-weight">—</strong><small id="today-weight-note">尚未记录</small></article></div>
-      <article class="card today-status-card"><p class="eyebrow">今日完成情况</p><div class="today-checks"><div id="food-summary" class="today-check"><span>🍽️</span><div><strong>饮食</strong><small>未记录</small></div></div><div id="workout-summary" class="today-check"><span>🏃</span><div><strong>训练</strong><small>未完成</small></div></div></div><div class="home-actions"><button class="secondary" data-go="food">添加饮食</button><button class="primary" data-go="workout">开始训练</button><button class="secondary home-weight-button" id="home-add-weight">记录体重</button><button class="secondary" id="home-add-expense">记录消费</button></div></article>
+      <article class="card today-status-card"><p class="eyebrow">今日完成情况</p><div class="today-checks"><div id="lunch-summary" class="today-check"><span>🥣</span><div><strong>午餐</strong><small>未记录</small></div></div><div id="dinner-summary" class="today-check"><span>🥤</span><div><strong>晚餐</strong><small>未记录</small></div></div><div id="workout-summary" class="today-check"><span>🏃</span><div><strong>训练</strong><small>未完成</small></div></div><div id="expense-summary" class="today-check"><span>🧾</span><div><strong>消费</strong><small>未记录</small></div></div></div><div class="home-actions"><button class="secondary" id="home-add-lunch">记录午餐</button><button class="secondary" id="home-add-dinner">记录晚餐</button><button class="primary" data-go="workout">开始训练</button><button class="secondary home-weight-button" id="home-add-weight">记录体重</button><button class="secondary" id="home-add-expense">记录消费</button><button class="secondary" data-go="trends">身体趋势</button></div></article>
     </section>
 
     <section id="view-food" class="view" aria-labelledby="food-title">
@@ -44,6 +44,7 @@
     <section id="view-expenses" class="view" aria-labelledby="expenses-title">
       <div class="section-heading"><div><p class="eyebrow">消费</p><h2 id="expenses-title">消费记录</h2></div><button class="text-button" id="add-expense-button">＋ 记录消费</button></div>
       <div class="stats-grid"><article class="stat-card"><span>当前消费</span><strong id="expense-total">¥0</strong><small>今天已消费</small></article><article class="stat-card"><span>今日还可花</span><strong id="food-expense">¥0</strong><small>每日额度 ¥15</small></article></div>
+      <article class="card expense-search-card"><div class="section-heading"><div><p class="eyebrow">查询</p><h3>按年月日查看消费</h3></div><button class="text-button" id="clear-expense-query" type="button">清除</button></div><label class="form-field">日期<input id="expense-date-query" type="date"></label><p class="muted" id="expense-query-total">消费总和 ¥0</p></article>
       <article class="card" hidden><div id="expense-breakdown" class="breakdown"></div></article>
       <section class="section"><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
     </section>
@@ -52,6 +53,6 @@
 
   <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">身体</button><button data-view="expenses">记账</button></nav>
   <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js?v=41"></script>
+  <script src="app.js?v=43"></script>
 </body>
 </html>

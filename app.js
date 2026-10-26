@@ -56,7 +56,7 @@ function todayTotals(){return todayMeals().reduce((a,m)=>({kcal:a.kcal+m.kcal,pr
 function expensesThisMonth(){return state.expenses.filter(x=>x.type!=='income'&&x.date.startsWith(month()));}
 function renderFood(){const list=$('#meal-items');list.innerHTML='';state.draftFoods.forEach((f,i)=>{const row=document.createElement('div');row.className='item-row';row.innerHTML=`<div><p>${f.name}</p><small>${fmt(f.grams*f.kcal/100)} kcal · ${fmt(f.grams*f.protein/100)} g 蛋白质</small></div><label><input class="gram-input" type="number" min="0" value="${f.grams}" data-food="${i}"> g</label>`;list.append(row);}); const t=calcMeal();$('#meal-total').textContent=`${fmt(t.kcal)} kcal · ${fmt(t.protein)} g 蛋白质 · ${fmt(t.fiber)} g 纤维`;
   $('#food-history').innerHTML=state.meals.length?state.meals.slice(0,8).map(m=>`<div class="history-row"><div><p>🍽️ ${m.name}</p><small>${m.date} · ${fmt(m.kcal)} kcal</small></div><button class="text-button" data-delete="meals:${m.id}">删除</button></div>`).join(''):'暂无饮食记录';}
-function renderHome(){const ate=todayMeals().length>0,worked=state.workouts.some(x=>x.date===today()),todayWeight=state.weights.filter(x=>x.date===today()).at(-1);$('#month-expense').textContent=money(expensesThisMonth().reduce((sum,item)=>sum+Number(item.amount||0),0));$('#today-weight').textContent=todayWeight?`${fmt(todayWeight.value)} kg`:'—';$('#today-weight-note').textContent=todayWeight?'今日已记录':'尚未记录';const setStatus=(id,done,doneText,todoText)=>{const el=$(id);el.classList.toggle('done',done);el.querySelector('small').textContent=done?doneText:todoText;};setStatus('#food-summary',ate,'已记录','未记录');setStatus('#workout-summary',worked,'已完成','未完成');}
+function renderHome(){const ate=todayMeals().length>0,worked=state.workouts.some(x=>x.date===today()),todayWeight=state.weights.filter(x=>x.date===today()).at(-1);$('#month-expense').textContent=money(expensesThisMonth().reduce((sum,item)=>sum+Number(item.amount||0),0));$('#today-weight').textContent=todayWeight?`${fmt(todayWeight.value)} kg`:'—';$('#today-weight-note').textContent=todayWeight?'今日已记录':'尚未记录';const setStatus=(id,done,doneText,todoText)=>{const el=$(id);if(!el)return;el.classList.toggle('done',done);el.querySelector('small').textContent=done?doneText:todoText;};setStatus('#food-summary',ate,'已记录','未记录');setStatus('#workout-summary',worked,'已完成','未完成');}
 function renderTrends(){const weights=[...state.weights].sort((a,b)=>a.date.localeCompare(b.date));const latest=weights.at(-1);$('#latest-weight').textContent=latest?fmt(latest.value):'—';const bmi=latest&&state.height?latest.value/((state.height/100)**2):null;$('#bmi-value').textContent=bmi?fmt(bmi):'—';$('#height-caption').textContent=state.height?`身高 ${state.height} cm`:'请设置身高';$('#height-input').value=state.height||'';if(!weights.length){$('#weight-chart').className='weight-chart empty-state';$('#weight-chart').textContent='记录体重后显示趋势';return}const min=Math.min(...weights.map(x=>x.value)),max=Math.max(...weights.map(x=>x.value)),span=Math.max(max-min,.4);$('#weight-chart').className='weight-chart';$('#weight-chart').innerHTML=weights.slice(-8).map(x=>`<div class="weight-bar" style="height:${35+((x.value-min)/span)*60}px"><b>${fmt(x.value)}</b><span>${x.date.slice(5)}</span></div>`).join('');}
 function renderExpenses(){const expenses=expensesThisMonth(), total=expenses.reduce((a,x)=>a+x.amount,0), food=expenses.filter(x=>x.category==='食材').reduce((a,x)=>a+x.amount,0);$('#expense-total').textContent=money(total);$('#food-expense').textContent=money(food); const cats=['食材','补剂','其他'];$('#expense-breakdown').innerHTML=cats.map(c=>{const n=expenses.filter(x=>x.category===c).reduce((a,x)=>a+x.amount,0);return `<div class="breakdown-row"><span>${c}</span><div class="bar"><i style="width:${total?n/total*100:0}%"></i></div><b>${money(n)}</b></div>`}).join('');$('#expense-history').innerHTML=state.expenses.length?state.expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(x=>`<div class="history-row"><div><p>${x.name}</p><small>${x.date} · ${x.category}</small></div><strong>${money(x.amount)}</strong></div>`).join(''):'暂无花销记录';}
 function renderWorkouts(){ $('#workout-history').innerHTML=state.workouts.length?state.workouts.slice(0,8).map(x=>`<div class="history-row"><div><p>🏃 ${x.exercises?.length?'自定义训练':'自重循环'}</p><small>${x.date} · ${x.rounds} 轮</small></div><button class="text-button" data-delete="workouts:${x.id}">删除</button></div>`).join(''):'暂无训练记录';}
@@ -432,6 +432,64 @@ document.addEventListener('click',async event=>{
 // A background Android sync may have run while the app was closed. Bring those values into local storage on launch.
 (async()=>{try{const health=window.Capacitor?.Plugins?.HealthConnect;if(!health)return;configureNativeAutoSync();const result=await health.getBackgroundHealth();if(!result.healthJson)return;applyBackgroundHealth(JSON.parse(result.healthJson));localStorage.setItem('diet-training-state',JSON.stringify(state));render();configureNativeAutoSync();}catch{}})();
 render();
+
+// Split the default diet into two gentler meals while preserving custom plans and past records.
+const splitLunchFoods=[
+  {name:'即食燕麦',grams:60,kcal:393,protein:11,fiber:10.6},
+  {name:'亚麻籽粉',grams:10,kcal:534,protein:18.3,fiber:27.3},
+  {name:'花生酱',grams:10,kcal:588,protein:25,fiber:6},
+  {name:'大豆分离蛋白',grams:30,kcal:350,protein:76,fiber:1.4}
+];
+const splitDinnerFoods=[
+  {name:'大豆分离蛋白',grams:30,kcal:350,protein:76,fiber:1.4},
+  {name:'善存（29）',grams:1,kcal:0,protein:0,fiber:0},
+  {name:'钙尔奇 D600',grams:1,kcal:0,protein:0,fiber:0}
+];
+if((state.mealSplitVersion||0)<1){
+  let lunch=state.mealPlans.find(plan=>plan.id==='default-meal')||state.mealPlans.find(plan=>plan.name==='午餐');
+  if(!lunch){lunch={id:'default-meal',name:'午餐',items:clonePlanItems(splitLunchFoods)};state.mealPlans.unshift(lunch);}
+  else {lunch.name='午餐';lunch.items=clonePlanItems(splitLunchFoods);}
+  let dinner=state.mealPlans.find(plan=>plan.id==='default-dinner')||state.mealPlans.find(plan=>plan.name==='晚餐');
+  if(!dinner){dinner={id:'default-dinner',name:'晚餐',items:clonePlanItems(splitDinnerFoods)};state.mealPlans.push(dinner);}
+  else {dinner.name='晚餐';dinner.items=clonePlanItems(splitDinnerFoods);}
+  state.activeMealPlan=lunch.id;state.draftFoods=lunch.items;state.mealSplitVersion=1;save();
+}
+function openMealPlan(name){
+  const plan=state.mealPlans.find(item=>item.name===name);
+  if(!plan){showToast(`未找到${name}方案`);return;}
+  state.activeMealPlan=plan.id;state.draftFoods=plan.items;render();openView('food');
+}
+renderHome=function(){
+  const todayWeight=state.weights.filter(item=>item.date===today()).at(-1),budget=dailyBudgetStatus(),spent=spendingTotal(todayExpenses());
+  const expenseCard=$('#month-expense').closest('.stat-card');
+  expenseCard.classList.add('home-expense-card');expenseCard.setAttribute('role','button');expenseCard.setAttribute('tabindex','0');
+  expenseCard.querySelector('span').textContent='今日消费';$('#month-expense').textContent=money(spent);expenseCard.querySelector('small').textContent=`今日还可花 ${money(budget.available)}`;
+  expenseCard.onclick=()=>openView('expenses');expenseCard.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openView('expenses');}};
+  $('#today-weight').textContent=todayWeight?`${fmt(todayWeight.value)} kg`:'—';$('#today-weight-note').textContent=todayWeight?'今日已记录':'尚未记录';
+  const setStatus=(id,done,doneText,todoText)=>{const card=$(id);card.classList.toggle('done',done);card.querySelector('small').textContent=done?doneText:todoText;};
+  setStatus('#lunch-summary',state.meals.some(item=>item.date===today()&&item.name==='午餐'),'已记录','未记录');
+  setStatus('#dinner-summary',state.meals.some(item=>item.date===today()&&item.name==='晚餐'),'已记录','未记录');
+  setStatus('#workout-summary',state.workouts.some(item=>item.date===today()),'已完成','未完成');
+  setStatus('#expense-summary',todayExpenses().length>0,'已记录','未记录');
+};
+$('#save-meal-button').onclick=()=>{const totals=calcMeal(),plan=state.mealPlans.find(item=>item.id===state.activeMealPlan);state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:plan?.name||'饮食',...totals});save();render();};
+$('#home-add-lunch').onclick=()=>openMealPlan('午餐');
+$('#home-add-dinner').onclick=()=>openMealPlan('晚餐');
+renderExpenses=function(){
+  const allExpenses=state.expenses.filter(item=>item.type!=='income'),queryDate=state.expenseQueryDate||'',records=queryDate?allExpenses.filter(item=>item.date===queryDate):allExpenses;
+  const todayTotal=spendingTotal(todayExpenses()),budget=dailyBudgetStatus();
+  const totalCard=$('#expense-total').closest('.stat-card');totalCard.querySelector('span').textContent='当前消费';$('#expense-total').textContent=money(todayTotal);totalCard.querySelector('small').textContent='今天已消费';
+  const availableCard=$('#food-expense').closest('.stat-card');availableCard.querySelector('span').textContent='今日还可花';$('#food-expense').textContent=money(budget.available);availableCard.querySelector('small').textContent=`每日额度 ${money(budget.limit)} · 点击修改`;availableCard.classList.add('editable-budget-card');availableCard.onclick=editAvailableBudget;
+  const queryInput=$('#expense-date-query');queryInput.value=queryDate;queryInput.onchange=event=>{state.expenseQueryDate=event.target.value;renderExpenses();};
+  $('#clear-expense-query').onclick=()=>{state.expenseQueryDate='';renderExpenses();};
+  $('#expense-query-total').textContent=`${queryDate?queryDate:'全部记录'} · 消费总和 ${money(spendingTotal(records))}`;
+  let setting=$('#daily-budget-setting');if(!setting){setting=document.createElement('article');setting.id='daily-budget-setting';setting.className='card settings-card';$('#expense-total').closest('.stats-grid').after(setting);}
+  setting.innerHTML=`<div class="section-heading"><h3>每日可花额度</h3><label class="compact-input">¥ <input id="daily-limit-input" type="number" min="0" step="1" value="${budget.limit}"></label></div><p>今天还可花 ${money(budget.available)}。未花完会累积到明天，超支会从后续额度扣除。</p>`;
+  $('#daily-limit-input').onchange=event=>{state.dailyExpenseLimit=Math.max(0,Number(event.target.value)||0);save();render();};
+  const rows=records.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(item=>`<div class="history-row"><div><p>${item.name}</p><small>${item.date}</small></div><strong>${money(item.amount)}</strong><button class="text-button" data-delete="expenses:${item.id}">删除</button></div>`).join('');
+  $('#expense-history').innerHTML=rows||'<p class="empty-state">暂无消费记录</p>';
+};
+render();
 // The computer page and phone page each have their own browser storage.
 // Refresh from the shared server shortly after opening so both screens converge.
 
@@ -509,8 +567,7 @@ function editAvailableBudget(){
   });
 }
 renderHome=function(){
-  const ate=todayMeals().length>0,worked=state.workouts.some(item=>item.date===today()),todayWeight=state.weights.filter(item=>item.date===today()).at(-1);
-  const budget=dailyBudgetStatus(),spent=spendingTotal(todayExpenses());
+  const todayWeight=state.weights.filter(item=>item.date===today()).at(-1),budget=dailyBudgetStatus(),spent=spendingTotal(todayExpenses());
   const expenseCard=$('#month-expense').closest('.stat-card');
   expenseCard.classList.add('home-expense-card');
   expenseCard.setAttribute('role','button');
@@ -523,10 +580,13 @@ renderHome=function(){
   $('#today-weight').textContent=todayWeight?`${fmt(todayWeight.value)} kg`:'—';
   $('#today-weight-note').textContent=todayWeight?'今日已记录':'尚未记录';
   const setStatus=(id,done,doneText,todoText)=>{const el=$(id);el.classList.toggle('done',done);el.querySelector('small').textContent=done?doneText:todoText;};
-  setStatus('#food-summary',ate,'已记录','未记录');setStatus('#workout-summary',worked,'已完成','未完成');
+  setStatus('#lunch-summary',state.meals.some(item=>item.date===today()&&item.name==='午餐'),'已记录','未记录');
+  setStatus('#dinner-summary',state.meals.some(item=>item.date===today()&&item.name==='晚餐'),'已记录','未记录');
+  setStatus('#workout-summary',state.workouts.some(item=>item.date===today()),'已完成','未完成');
+  setStatus('#expense-summary',todayExpenses().length>0,'已记录','未记录');
 };
 renderExpenses=function(){
-  const expenses=currentMonthExpenses(),total=spendingTotal(expenses),todayTotal=spendingTotal(todayExpenses()),budget=dailyBudgetStatus();
+  const allExpenses=state.expenses.filter(item=>item.type!=='income'),queryDate=state.expenseQueryDate||'',expenses=queryDate?allExpenses.filter(item=>item.date===queryDate):allExpenses,todayTotal=spendingTotal(todayExpenses()),budget=dailyBudgetStatus();
   const totalCard=$('#expense-total').closest('.stat-card');
   totalCard.querySelector('span').textContent='当前消费';
   $('#expense-total').textContent=money(todayTotal);
@@ -539,6 +599,11 @@ renderExpenses=function(){
   availableCard.setAttribute('role','button');availableCard.setAttribute('tabindex','0');
   availableCard.onclick=editAvailableBudget;
   availableCard.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();editAvailableBudget();}};
+  const queryInput=$('#expense-date-query');
+  queryInput.value=queryDate;
+  queryInput.onchange=event=>{state.expenseQueryDate=event.target.value;renderExpenses();};
+  $('#clear-expense-query').onclick=()=>{state.expenseQueryDate='';renderExpenses();};
+  $('#expense-query-total').textContent=`${queryDate?queryDate:'全部记录'} · 消费总和 ${money(spendingTotal(expenses))}`;
   let setting=$('#daily-budget-setting');
   if(!setting){setting=document.createElement('article');setting.id='daily-budget-setting';setting.className='card settings-card';$('#expense-total').closest('.stats-grid').after(setting);}
   setting.innerHTML=`<div class="section-heading"><h3>每日可花额度</h3><label class="compact-input">¥ <input id="daily-limit-input" type="number" min="0" step="1" value="${budget.limit}"></label></div><p>今天还可花 ${money(budget.available)}。未花完会累积到明天，超支会从后续额度扣除。</p>`;
