@@ -90,7 +90,7 @@ function updateDifficultyUI(){const level=difficultyLevel(),input=$('#difficulty
 function displayTarget(item){return item?.isRest?item.target:adjustedTarget(item?.target||'');}
 function drawTimer(){const s=timer.seconds, list=state.exercises||[], current=list[timer.exerciseIndex]||{name:'训练完成',target:'保存记录'};$('#timer-display').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#timer-toggle').textContent=timer.running?'暂停':'开始';$('#timer-state').textContent=timer.running?'训练计时中':'准备开始';$('#exercise-name').textContent=`第 ${timer.exerciseIndex+1} 项：${current.name}`;$('#exercise-detail').textContent=`目标 ${displayTarget(current)} · 共 ${$('#rounds-input').value||3} 轮`;}
 $('#difficulty-input').onchange=e=>{state.difficultyLevel=Math.min(5,Math.max(1,Number(e.target.value)||3));updateDifficultyUI();drawTimer();renderExtras();save();};
-function startTimer(){if(timer.running)return;timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
+function startTimer(){if(timer.running)return;if(!state.activeWorkoutSession){state.activeWorkoutSession={startedAt:new Date().toISOString(),date:today(),planId:state.activeWorkoutPlan};save();}timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
 $('#timer-toggle').onclick=()=>{if(timer.running){timer.running=false;clearInterval(timer.interval);}else startTimer();drawTimer();};$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();};$('#next-exercise').onclick=()=>{timer.exerciseIndex=(timer.exerciseIndex+1)%Math.max(1,(state.exercises||[]).length);timer.seconds=0;startTimer();drawTimer();};$('#complete-workout').onclick=()=>{const rounds=Math.max(1,Number($('#rounds-input').value)||3);state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});save();timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();render();};
 $('#export-button').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`饮食训练本-${today()}.json`;a.click();URL.revokeObjectURL(url);};
 let syncTimer;
@@ -637,7 +637,21 @@ renderExpenses=function(){
 $('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{state.expenses.unshift({id:crypto.randomUUID(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();});
 $('#save-meal-top').onclick=()=>$('#save-meal-button').click();
 $('#home-add-expense').onclick=()=>$('#add-expense-button').click();
+$('#complete-workout').onclick=()=>{
+  const session=state.activeWorkoutSession;
+  if(!session){showToast('请先点击开始');return;}
+  const rounds=Math.max(1,Number($('#rounds-input').value)||3);
+  state.workouts.unshift({id:crypto.randomUUID(),date:session.date||today(),createdAt:new Date().toISOString(),startedAt:session.startedAt,endedAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});
+  delete state.activeWorkoutSession;
+  timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;
+  save();render();drawTimer();openView('home');showToast('训练已保存，新的阶段已准备好');
+};
+$('#reset-timer').onclick=()=>{
+  timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;
+  delete state.activeWorkoutSession;save();drawTimer();showToast('当前训练阶段已清空');
+};
 $('#mark-rest-day').onclick=()=>{
+  timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;delete state.activeWorkoutSession;
   state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),restDay:true});
   save();render();showToast('已记录今日休息');
 };
