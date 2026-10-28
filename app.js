@@ -567,6 +567,25 @@ function editAvailableBudget(){
     save();render();
   });
 }
+function weekDatesThroughToday(){
+  const current=new Date(`${today()}T12:00:00`),offset=(current.getDay()+6)%7,start=new Date(current);
+  start.setDate(current.getDate()-offset);
+  const dates=[];
+  for(const day=new Date(start);day<=current;day.setDate(day.getDate()+1))dates.push(day.toISOString().slice(0,10));
+  return dates;
+}
+function renderWeeklyGoals(){
+  const dates=weekDatesThroughToday(),inWeek=item=>dates.includes(item.date),unique=(items)=>new Set(items.map(item=>item.date)).size;
+  const lunch=unique(state.meals.filter(item=>inWeek(item)&&item.name==='午餐'));
+  const dinner=unique(state.meals.filter(item=>inWeek(item)&&item.name==='晚餐'));
+  const workout=unique(state.workouts.filter(item=>inWeek(item)&&!item.restDay));
+  const limit=Math.max(0,Number(state.dailyExpenseLimit)||15);
+  const spending=dates.filter(date=>spendingTotal(state.expenses.filter(item=>item.type!=='income'&&item.date===date))<=limit).length;
+  $('#weekly-lunch').textContent=`${lunch}/7`;$('#weekly-dinner').textContent=`${dinner}/7`;$('#weekly-workout').textContent=`${workout}/5`;$('#weekly-spending').textContent=`${spending}/7`;
+  const complete=lunch>=7&&dinner>=7&&workout>=5&&spending>=7,card=$('.weekly-goals-card'),badge=$('#weekly-goal-badge');
+  card.classList.toggle('is-complete',complete);badge.textContent=complete?'已达成':'进行中';
+  $('#weekly-goal-note').textContent=complete?'🎉 本周目标全部完成，安排一份喜欢的非食物奖励吧！':'完成本周目标，解锁一份给自己的非食物奖励。';
+}
 renderHome=function(){
   const todayWeight=state.weights.filter(item=>item.date===today()).at(-1),budget=dailyBudgetStatus(),spent=spendingTotal(todayExpenses());
   const expenseCard=$('#month-expense').closest('.stat-card');
@@ -586,6 +605,7 @@ renderHome=function(){
   const todayWorkout=state.workouts.find(item=>item.date===today());
   setStatus('#workout-summary',Boolean(todayWorkout),todayWorkout?.restDay?'已休息':'已完成','未完成');
   setStatus('#expense-summary',todayExpenses().length>0,'已记录','未记录');
+  renderWeeklyGoals();
 };
 renderExpenses=function(){
   const allExpenses=state.expenses.filter(item=>item.type!=='income'),queryDate=state.expenseQueryDate||'',expenses=queryDate?allExpenses.filter(item=>item.date===queryDate):allExpenses,todayTotal=spendingTotal(todayExpenses()),budget=dailyBudgetStatus();
