@@ -62,7 +62,7 @@ function renderTrends(){const weights=[...state.weights].sort((a,b)=>a.date.loca
 function renderExpenses(){const expenses=expensesThisMonth(), total=expenses.reduce((a,x)=>a+x.amount,0), food=expenses.filter(x=>x.category==='食材').reduce((a,x)=>a+x.amount,0);$('#expense-total').textContent=money(total);$('#food-expense').textContent=money(food); const cats=['食材','补剂','其他'];$('#expense-breakdown').innerHTML=cats.map(c=>{const n=expenses.filter(x=>x.category===c).reduce((a,x)=>a+x.amount,0);return `<div class="breakdown-row"><span>${c}</span><div class="bar"><i style="width:${total?n/total*100:0}%"></i></div><b>${money(n)}</b></div>`}).join('');$('#expense-history').innerHTML=state.expenses.length?state.expenses.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(x=>`<div class="history-row"><div><p>${x.name}</p><small>${x.date} · ${x.category}</small></div><strong>${money(x.amount)}</strong></div>`).join(''):'暂无花销记录';}
 function renderWorkouts(){ $('#workout-history').innerHTML=state.workouts.length?state.workouts.slice(0,8).map(x=>`<div class="history-row"><div><p>${x.restDay?'🌿 今日休息':`🏃 ${x.exercises?.length?'自定义训练':'自重循环'}`}</p><small>${x.restDay?x.date:`${x.date} · ${x.rounds} 轮`}</small></div><button class="text-button" data-delete="workouts:${x.id}">删除</button></div>`).join(''):'暂无训练记录';}
 function render(){renderHome();renderFood();renderTrends();renderExpenses();renderWorkouts();renderExtras();}
-function dialog(title,fields,onSave){$('#dialog-title').textContent=title;$('#dialog-fields').innerHTML=fields;const d=$('#entry-dialog');d.showModal();const form=$('#entry-form');form.onsubmit=(e)=>{e.preventDefault();onSave(new FormData(form));d.close();};}
+function dialog(title,fields,onSave){$('#dialog-title').textContent=title;$('#dialog-fields').innerHTML=fields;const d=$('#entry-dialog');d.showModal();const form=$('#entry-form');form.querySelector('.primary').textContent='保存';form.onsubmit=(e)=>{e.preventDefault();onSave(new FormData(form));d.close();};}
 document.addEventListener('input',(e)=>{if(e.target.matches('[data-food]')){state.draftFoods[e.target.dataset.food].grams=Math.max(0,Number(e.target.value)||0);save();const t=calcMeal();$('#meal-total').textContent=`${fmt(t.kcal)} kcal · ${fmt(t.protein)} g 蛋白质 · ${fmt(t.fiber)} g 纤维`;}});
 function showToast(message){
   let toast=$('#app-toast');
@@ -531,12 +531,13 @@ function openCalendar(){
   input.onchange=refresh;refresh();
 }
 function openSettingsList(){
-  dialog('\u8bbe\u7f6e',`<p class="settings-note">\u8bb0\u5f55\u4f1a\u81ea\u52a8\u4fdd\u5b58\u5e76\u540c\u6b65\u3002</p><div class="settings-list"><button type="button" id="settings-games">\ud83c\udfae \u6e38\u620f\u8bb0\u5f55</button><button type="button" id="settings-export">\ud83d\udce5 \u4e0b\u8f7d\u5907\u4efd</button><button type="button" id="settings-import">\ud83d\udce4 \u4e0a\u4f20\u5907\u4efd</button></div><label class="form-field">\u7535\u8111\u670d\u52a1\u5668\u5730\u5740<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label>`,f=>{
+  dialog('\u8bbe\u7f6e',`<p class="settings-note">\u8bb0\u5f55\u4f1a\u81ea\u52a8\u4fdd\u5b58\u5e76\u540c\u6b65\u3002</p><div class="settings-list"><button type="button" id="settings-stage-history">🗂️ \u9636\u6bb5\u5386\u53f2</button><button type="button" id="settings-games">\ud83c\udfae \u6e38\u620f\u8bb0\u5f55</button><button type="button" id="settings-export">\ud83d\udce5 \u4e0b\u8f7d\u5907\u4efd</button><button type="button" id="settings-import">\ud83d\udce4 \u4e0a\u4f20\u5907\u4efd</button></div><label class="form-field">\u7535\u8111\u670d\u52a1\u5668\u5730\u5740<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label>`,f=>{
     const url=String(f.get('serverUrl')||'').trim().replace(/\/$/,'');
     $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
     if(url){scheduleSync();setSyncStatus('\u81ea\u52a8\u540c\u6b65\u5df2\u5f00\u542f');}else setSyncStatus('\u4ec5\u4fdd\u5b58\u5230\u672c\u673a');
   });
   $('#settings-export').onclick=()=>$('#export-button').click();
+  $('#settings-stage-history').onclick=()=>{$('#entry-dialog').close();openStageHistory();};
   $('#settings-games').onclick=()=>{$('#entry-dialog').close();openView('games');};
   $('#settings-import').onclick=()=>$('#import-backup-file').click();
 }
@@ -671,6 +672,7 @@ function renderStageCard(){
   const active=state.activeStage,card=$('#stage-card'),button=$('#stage-action');
   const sections=['.home-metrics','.weekly-goals-card','.today-status-card'];
   sections.forEach(selector=>$(selector).hidden=!active);
+  $('#weight-history')?.closest('.section')?.setAttribute('hidden','');
   card.classList.toggle('is-active',Boolean(active));
   if(!active){
     const latest=state.stages[0];
@@ -702,6 +704,20 @@ function finishStage(){
   delete state.activeStage;delete state.activeWorkoutSession;
   timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;
   save();render();drawTimer();showToast('阶段已保存，可以开始新的阶段');
+}
+function openStageHistory(){
+  const stages=state.stages||[];
+  const rows=stages.length?stages.map(stage=>{const start=new Date(stage.startedAt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}),end=new Date(stage.endedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}),summary=stage.summary||{};return `<div class="history-row"><div><p>🗂️ ${start} — ${end}</p><small>${summary.meals||0} 餐 · ${summary.workouts||0} 次训练 · ${summary.weights||0} 次体重 · ${money(summary.expenses||0)}</small></div><button class="text-button" data-stage-detail="${stage.id}">查看</button></div>`;}).join(''):'<p class="empty-state">暂无已结束的阶段</p>';
+  dialog('阶段历史',`<div class="history-list">${rows}</div>`,()=>{});
+  $('#entry-form .primary').textContent='关闭';
+  $$('#dialog-fields [data-stage-detail]').forEach(button=>button.onclick=()=>openStageDetail(button.dataset.stageDetail));
+}
+function openStageDetail(id){
+  const stage=(state.stages||[]).find(item=>item.id===id);if(!stage)return;
+  const ids=stage.recordIds||{},items=(type)=>new Set(ids[type]||[]),mealRows=state.meals.filter(item=>items('meals').has(item.id)).map(item=>`<li>${item.name} · ${fmt(item.kcal||0)} kcal</li>`),workoutRows=state.workouts.filter(item=>items('workouts').has(item.id)).map(item=>`<li>${item.restDay?'今日休息':`${item.rounds||0} 轮训练`}</li>`),weightRows=state.weights.filter(item=>items('weights').has(item.id)).map(item=>`<li>${fmt(item.value)} kg</li>`),expenseRows=state.expenses.filter(item=>items('expenses').has(item.id)).map(item=>`<li>${item.name} · ${money(item.amount||0)}</li>`);
+  const section=(title,rows)=>`<section class="section"><h3>${title}</h3>${rows.length?`<ul class="stage-detail-list">${rows.join('')}</ul>`:'<p class="muted">无记录</p>'}</section>`;
+  dialog('阶段详情',`${section('饮食',mealRows)}${section('训练',workoutRows)}${section('体重',weightRows)}${section('消费',expenseRows)}`,()=>{});
+  $('#entry-form .primary').textContent='关闭';
 }
 const baseStageHomeRender=renderHome;
 renderHome=function(){baseStageHomeRender();renderStageCard();};

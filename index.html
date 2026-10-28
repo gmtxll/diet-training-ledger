@@ -25,14 +25,14 @@
     <section id="view-food" class="view" aria-labelledby="food-title">
       <div class="section-heading food-header"><div><p class="eyebrow">饮食</p><h2 id="food-title">记录一餐</h2></div><div class="food-header-actions"><button class="text-button" id="add-food-button">自定义食材</button><button class="primary" id="save-meal-top">保存本餐</button></div></div><div class="button-row"><select id="meal-plan-select"></select><button class="secondary" id="add-meal-plan">＋ 方案</button></div>
       <article class="card"><div class="section-heading"><h3>一餐方案</h3><span class="tag">模板</span></div><div id="meal-items" class="item-list"></div><div class="meal-total"><span>当前合计</span><strong id="meal-total">0 kcal · 0 g 蛋白质</strong></div><button class="primary full" id="save-meal-button" hidden>保存到今天</button></article>
-      <section class="section"><div class="section-heading"><h3>最近饮食</h3></div><div id="food-history" class="history-list empty-state">暂无饮食记录</div></section>
+      <section class="section" hidden><div class="section-heading"><h3>最近饮食</h3></div><div id="food-history" class="history-list empty-state">暂无饮食记录</div></section>
     </section>
 
     <section id="view-workout" class="view" aria-labelledby="workout-title">
       <div><p class="eyebrow">训练</p><h2 id="workout-title">自重循环</h2><p class="muted">深蹲、俯卧撑、平板支撑、卷腹</p></div><div class="button-row"><select id="workout-plan-select"></select><button class="secondary" id="add-workout-plan">＋ 方案</button></div>
       <article class="timer-card"><p id="timer-state">准备开始</p><strong id="timer-display">00:00</strong><h3 id="exercise-name">第 1 项：深蹲</h3><p id="exercise-detail">目标 25–30 次 · 共 3 轮</p><div class="button-row"><button class="secondary" id="reset-timer">重置</button><button class="secondary" id="next-exercise">下一项</button><button class="primary" id="timer-toggle">开始</button></div><div class="button-row workout-finish-actions"><button class="secondary" id="mark-rest-day">今日休息</button><button class="primary" id="complete-workout">结束并保存</button></div></article>
       <article class="card"><div class="section-heading"><h3>训练设置</h3><label class="compact-input">轮数 <input id="rounds-input" type="number" min="1" max="8" value="3"></label></div><div class="training-inputs"><label class="compact-input">难度 <select id="difficulty-input"><option value="1">1 · 适应</option><option value="2">2 · 轻松</option><option value="3">3 · 标准</option><option value="4">4 · 加强</option><option value="5">5 · 进阶</option></select></label><label class="compact-input">组间休息（秒） <input id="rest-input" type="number" min="0" value="45"></label></div><p id="difficulty-note" class="muted">标准难度：按方案原始次数训练</p><div id="exercise-list" class="exercise-list"></div><button class="text-button" id="add-exercise-button">＋ 添加动作</button></article>
-      <section class="section"><h3>训练历史</h3><div id="workout-history" class="history-list empty-state">暂无训练记录</div></section>
+      <section class="section" hidden><h3>训练历史</h3><div id="workout-history" class="history-list empty-state">暂无训练记录</div></section>
     </section>
 
     <section id="view-trends" class="view" aria-labelledby="trends-title">
@@ -48,13 +48,13 @@
       <div class="stats-grid"><article class="stat-card"><span>当前消费</span><strong id="expense-total">¥0</strong><small>今天已消费</small></article><article class="stat-card"><span>今日还可花</span><strong id="food-expense">¥0</strong><small>每日额度 ¥15</small></article></div>
       <article class="card expense-search-card"><div class="section-heading"><div><p class="eyebrow">查询</p><h3>按年月日查看消费</h3></div><button class="text-button" id="clear-expense-query" type="button">清除</button></div><label class="form-field">日期<input id="expense-date-query" type="date"></label><p class="muted" id="expense-query-total">消费总和 ¥0</p></article>
       <article class="card" hidden><div id="expense-breakdown" class="breakdown"></div></article>
-      <section class="section"><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
+      <section class="section" hidden><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
     </section>
     <section id="view-games" class="view" aria-labelledby="games-title"><div class="section-heading"><div><p class="eyebrow">游戏</p><h2 id="games-title">游戏记录</h2></div><button class="text-button" id="add-game-button">＋ 添加游戏</button></div><article class="card"><h3>当前游玩</h3><div id="playing-games" class="history-list empty-state">暂无正在玩的游戏</div></article><article class="card"><h3>已游玩</h3><div id="finished-games" class="history-list empty-state">暂无已游玩游戏</div></article><article class="card"><h3>全部记录</h3><div id="record-list" class="history-list empty-state">暂无记录</div></article></section>
   </main>
 
   <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">身体</button><button data-view="expenses">记账</button></nav>
   <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js?v=49"></script>
+  <script src="app.js?v=50"></script>
 </body>
 </html>
