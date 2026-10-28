@@ -127,6 +127,7 @@ h3 {
   padding: 0 12px;
   white-space: nowrap;
 }
+.food-header{align-items:flex-start}.food-header-actions{display:flex;align-items:center;gap:4px}.food-header-actions .primary{min-height:38px;padding:0 12px;font-size:13px}
 .today-status-card{display:grid;gap:18px}.today-checks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.today-check{display:flex;align-items:center;gap:9px;border:1px solid #e3e9e1;border-radius:14px;padding:13px;background:#fafcf9}.today-check>span{font-size:21px}.today-check div{display:grid;gap:2px}.today-check strong{font-size:14px}.today-check small{color:#7a857d;font-size:12px;white-space:nowrap}.today-check.done{border-color:#b9ddbd;background:#edf8ee}.today-check.done small{color:#23713a;font-weight:650}.home-actions{grid-auto-flow:row}.home-actions button{width:100%}.home-metrics{grid-template-columns:1fr 1fr}.home-metrics .stat-card{min-height:96px}
 .section {
   display: grid;

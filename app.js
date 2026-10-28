@@ -635,6 +635,7 @@ renderExpenses=function(){
   $('#saving-list')?.closest('.card')?.remove();
 };
 $('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{state.expenses.unshift({id:crypto.randomUUID(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();});
+$('#save-meal-top').onclick=()=>$('#save-meal-button').click();
 $('#home-add-expense').onclick=()=>$('#add-expense-button').click();
 $('#mark-rest-day').onclick=()=>{
   state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),restDay:true});
