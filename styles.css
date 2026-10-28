@@ -105,6 +105,7 @@ h3 {
 .card {
   padding: 17px;
 }
+.stage-card{display:flex;align-items:center;justify-content:space-between;gap:14px}.stage-card>div{display:grid;gap:4px}.stage-card .primary{flex:0 0 auto;min-width:82px}.stage-card.is-active{border-color:#b9ddbd;background:#f8fcf8}
 .action-card {
   display: flex;
   align-items: center;

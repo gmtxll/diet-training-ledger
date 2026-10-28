@@ -43,6 +43,7 @@ if(!Array.isArray(state.weights))state.weights=[];
 if(!Array.isArray(state.expenses))state.expenses=[];
 if(!Array.isArray(state.games))state.games=[];
 if(!Array.isArray(state.savings))state.savings=[];
+if(!Array.isArray(state.stages))state.stages=[];
 state.draftFoods ||= clonePlanItems(latestFoods);
 state.difficultyLevel=Math.min(5,Math.max(1,Number(state.difficultyLevel)||3));
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
@@ -90,7 +91,7 @@ function updateDifficultyUI(){const level=difficultyLevel(),input=$('#difficulty
 function displayTarget(item){return item?.isRest?item.target:adjustedTarget(item?.target||'');}
 function drawTimer(){const s=timer.seconds, list=state.exercises||[], current=list[timer.exerciseIndex]||{name:'训练完成',target:'保存记录'};$('#timer-display').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#timer-toggle').textContent=timer.running?'暂停':'开始';$('#timer-state').textContent=timer.running?'训练计时中':'准备开始';$('#exercise-name').textContent=`第 ${timer.exerciseIndex+1} 项：${current.name}`;$('#exercise-detail').textContent=`目标 ${displayTarget(current)} · 共 ${$('#rounds-input').value||3} 轮`;}
 $('#difficulty-input').onchange=e=>{state.difficultyLevel=Math.min(5,Math.max(1,Number(e.target.value)||3));updateDifficultyUI();drawTimer();renderExtras();save();};
-function startTimer(){if(timer.running)return;if(!state.activeWorkoutSession){state.activeWorkoutSession={startedAt:new Date().toISOString(),date:today(),planId:state.activeWorkoutPlan};save();}timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
+function startTimer(){if(timer.running)return;if(!state.activeStage){showToast('请先在首页开始一个阶段');return;}if(!state.activeWorkoutSession){state.activeWorkoutSession={startedAt:new Date().toISOString(),date:today(),planId:state.activeWorkoutPlan,stageId:state.activeStage.id};save();}timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
 $('#timer-toggle').onclick=()=>{if(timer.running){timer.running=false;clearInterval(timer.interval);}else startTimer();drawTimer();};$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();};$('#next-exercise').onclick=()=>{timer.exerciseIndex=(timer.exerciseIndex+1)%Math.max(1,(state.exercises||[]).length);timer.seconds=0;startTimer();drawTimer();};$('#complete-workout').onclick=()=>{const rounds=Math.max(1,Number($('#rounds-input').value)||3);state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});save();timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();render();};
 $('#export-button').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`饮食训练本-${today()}.json`;a.click();URL.revokeObjectURL(url);};
 let syncTimer;
@@ -324,7 +325,7 @@ importFile.onchange=async()=>{
     if(!restored||typeof restored!=='object'||!Array.isArray(restored.meals))throw new Error();
     if(!confirm('\u5bfc\u5165\u4f1a\u8986\u76d6\u5f53\u524d\u672c\u673a\u8bb0\u5f55\uff0c\u662f\u5426\u7ee7\u7eed\uff1f'))return;
     state=restored;
-    state.meals ||= []; state.workouts ||= []; state.weights ||= []; state.expenses ||= []; state.games ||= []; state.savings ||= [];
+    state.meals ||= []; state.workouts ||= []; state.weights ||= []; state.expenses ||= []; state.games ||= []; state.savings ||= []; state.stages ||= [];
     state.draftFoods ||= foods; state.exercises ||= []; state.mealPlans ||= [{id:'default-meal',name:'\u98df\u6750\u6e05\u5355',items:state.draftFoods}];
     state.workoutPlans ||= [{id:'default-workout',name:'\u81ea\u91cd\u5faa\u73af',items:state.exercises}];
     state.activeMealPlan ||= state.mealPlans[0].id; state.activeWorkoutPlan ||= state.workoutPlans[0].id;
@@ -659,4 +660,74 @@ state.dailyExpenseLimit ??=15;
 const spendingStyles=document.createElement('style');
 spendingStyles.textContent='.home-expense-card,.editable-budget-card{cursor:pointer}.home-expense-card:active,.editable-budget-card:active{transform:scale(.98);background:#f8fcf8}';
 document.head.append(spendingStyles);
+
+function requireActiveStage(){
+  if(state.activeStage)return true;
+  showToast('请先在首页点击“开始”');
+  return false;
+}
+function stageItems(type){return (state[type]||[]).filter(item=>item.stageId===state.activeStage?.id);}
+function renderStageCard(){
+  const active=state.activeStage,card=$('#stage-card'),button=$('#stage-action');
+  const sections=['.home-metrics','.weekly-goals-card','.today-status-card'];
+  sections.forEach(selector=>$(selector).hidden=!active);
+  card.classList.toggle('is-active',Boolean(active));
+  if(!active){
+    const latest=state.stages[0];
+    $('#stage-eyebrow').textContent='记录阶段';$('#stage-title').textContent='开始一个新阶段';
+    $('#stage-note').textContent=latest?`上一阶段已保存：${latest.summary.meals} 餐 · ${latest.summary.workouts} 次训练 · ${money(latest.summary.expenses)}`:'开始后，饮食、消费、体重与训练都会归入这一阶段。';
+    button.textContent='开始';button.onclick=startStage;return;
+  }
+  const meals=stageItems('meals'),workouts=stageItems('workouts'),weights=stageItems('weights'),expenses=stageItems('expenses');
+  $('#stage-eyebrow').textContent=`阶段进行中 · ${new Date(active.startedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})} 开始`;
+  $('#stage-title').textContent='正在记录本阶段';
+  $('#stage-note').textContent=`饮食 ${meals.length} · 训练 ${workouts.length} · 体重 ${weights.length} · 消费 ${money(spendingTotal(expenses))}`;
+  button.textContent='结束并保存';button.onclick=finishStage;
+  const setStageStatus=(selector,done,doneText,todoText)=>{const element=$(selector);element.classList.toggle('done',done);element.querySelector('small').textContent=done?doneText:todoText;};
+  setStageStatus('#lunch-summary',meals.some(item=>item.name==='午餐'),'已记录','未记录');
+  setStageStatus('#dinner-summary',meals.some(item=>item.name==='晚餐'),'已记录','未记录');
+  const training=workouts.find(item=>!item.restDay)||workouts.find(item=>item.restDay);
+  setStageStatus('#workout-summary',Boolean(training),training?.restDay?'已休息':'已完成','未完成');
+  setStageStatus('#expense-summary',expenses.length>0,'已记录','未记录');
+}
+function startStage(){
+  state.activeStage={id:crypto.randomUUID(),startedAt:new Date().toISOString()};
+  save();render();showToast('新阶段已开始，记录会自动归入其中');
+}
+function finishStage(){
+  const active=state.activeStage;if(!active)return;
+  if(!confirm('结束当前阶段并保存汇总？'))return;
+  const meals=stageItems('meals'),workouts=stageItems('workouts'),weights=stageItems('weights'),expenses=stageItems('expenses');
+  state.stages.unshift({id:active.id,startedAt:active.startedAt,endedAt:new Date().toISOString(),recordIds:{meals:meals.map(item=>item.id),workouts:workouts.map(item=>item.id),weights:weights.map(item=>item.id),expenses:expenses.map(item=>item.id)},summary:{meals:meals.length,workouts:workouts.length,weights:weights.length,expenses:spendingTotal(expenses)}});
+  delete state.activeStage;delete state.activeWorkoutSession;
+  timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;
+  save();render();drawTimer();showToast('阶段已保存，可以开始新的阶段');
+}
+const baseStageHomeRender=renderHome;
+renderHome=function(){baseStageHomeRender();renderStageCard();};
+$('#save-meal-button').onclick=()=>{
+  if(!requireActiveStage())return;
+  const totals=calcMeal(),plan=state.mealPlans.find(item=>item.id===state.activeMealPlan);
+  state.meals.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:today(),createdAt:new Date().toISOString(),name:plan?.name||'饮食',...totals});save();render();
+};
+$('#add-weight-button').onclick=()=>dialog('记录体重','<label class="form-field">体重（kg）<input name="value" type="number" min="20" max="350" step="0.1" required autofocus></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{
+  if(!requireActiveStage())return;
+  state.weights.push({id:crypto.randomUUID(),stageId:state.activeStage.id,createdAt:new Date().toISOString(),date:form.get('date'),value:Number(form.get('value'))});state.weights.sort((a,b)=>a.date.localeCompare(b.date));save();render();
+});
+$('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{
+  if(!requireActiveStage())return;
+  state.expenses.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,createdAt:new Date().toISOString(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();
+});
+$('#complete-workout').onclick=()=>{
+  const session=state.activeWorkoutSession;
+  if(!session||!requireActiveStage()){showToast('请先开始阶段与训练');return;}
+  const rounds=Math.max(1,Number($('#rounds-input').value)||3);
+  state.workouts.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:session.date||today(),createdAt:new Date().toISOString(),startedAt:session.startedAt,endedAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});
+  delete state.activeWorkoutSession;timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;save();render();drawTimer();showToast('本次训练已保存到当前阶段');
+};
+$('#mark-rest-day').onclick=()=>{
+  if(!requireActiveStage())return;
+  timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;delete state.activeWorkoutSession;
+  state.workouts.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:today(),createdAt:new Date().toISOString(),restDay:true});save();render();showToast('已记录今日休息');
+};
 render();
