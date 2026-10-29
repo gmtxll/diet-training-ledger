@@ -720,7 +720,12 @@ function finishStage(){
   const active=state.activeStage;if(!active)return;
   if(!confirm('结束当前阶段并保存汇总？'))return;
   const meals=stageItems('meals'),workouts=stageItems('workouts'),weights=stageItems('weights'),expenses=stageItems('expenses');
-  state.stages.unshift({id:active.id,startedAt:active.startedAt,endedAt:new Date().toISOString(),recordIds:{meals:meals.map(item=>item.id),workouts:workouts.map(item=>item.id),weights:weights.map(item=>item.id),expenses:expenses.map(item=>item.id)},summary:{meals:meals.length,workouts:workouts.length,weights:weights.length,expenses:spendingTotal(expenses)}});
+  state.stages.unshift({id:active.id,startedAt:active.startedAt,endedAt:new Date().toISOString(),records:{meals,workouts,weights,expenses},summary:{meals:meals.length,workouts:workouts.length,weights:weights.length,expenses:spendingTotal(expenses)}});
+  // Move completed-stage records out of the daily views; the immutable copy lives in stage history.
+  state.meals=state.meals.filter(item=>item.stageId!==active.id);
+  state.workouts=state.workouts.filter(item=>item.stageId!==active.id);
+  state.weights=state.weights.filter(item=>item.stageId!==active.id);
+  state.expenses=state.expenses.filter(item=>item.stageId!==active.id);
   delete state.activeStage;delete state.activeWorkoutSession;
   timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;
   save();render();drawTimer();showToast('阶段已保存，可以开始新的阶段');
@@ -734,7 +739,7 @@ function openStageHistory(){
 }
 function openStageDetail(id){
   const stage=(state.stages||[]).find(item=>item.id===id);if(!stage)return;
-  const ids=stage.recordIds||{},items=(type)=>new Set(ids[type]||[]),mealRows=state.meals.filter(item=>items('meals').has(item.id)).map(item=>`<li>${item.name} · ${fmt(item.kcal||0)} kcal</li>`),workoutRows=state.workouts.filter(item=>items('workouts').has(item.id)).map(item=>`<li>${item.restDay?'今日休息':`${item.rounds||0} 轮训练`}</li>`),weightRows=state.weights.filter(item=>items('weights').has(item.id)).map(item=>`<li>${fmt(item.value)} kg</li>`),expenseRows=state.expenses.filter(item=>items('expenses').has(item.id)).map(item=>`<li>${item.name} · ${money(item.amount||0)}</li>`);
+  const ids=stage.recordIds||{},items=(type)=>new Set(ids[type]||[]),archived=stage.records||{},records=(type)=>archived[type]||state[type].filter(item=>items(type).has(item.id)),mealRows=records('meals').map(item=>`<li>${item.name} · ${fmt(item.kcal||0)} kcal</li>`),workoutRows=records('workouts').map(item=>`<li>${item.restDay?'今日休息':`${item.rounds||0} 轮训练`}</li>`),weightRows=records('weights').map(item=>`<li>${fmt(item.value)} kg</li>`),expenseRows=records('expenses').map(item=>`<li>${item.name} · ${money(item.amount||0)}</li>`);
   const section=(title,rows)=>`<section class="section"><h3>${title}</h3>${rows.length?`<ul class="stage-detail-list">${rows.join('')}</ul>`:'<p class="muted">无记录</p>'}</section>`;
   dialog('阶段详情',`${section('饮食',mealRows)}${section('训练',workoutRows)}${section('体重',weightRows)}${section('消费',expenseRows)}`,()=>{});
   $('#entry-form .primary').textContent='关闭';
