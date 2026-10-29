@@ -434,6 +434,34 @@ document.addEventListener('click',async event=>{
 (async()=>{try{const health=window.Capacitor?.Plugins?.HealthConnect;if(!health)return;configureNativeAutoSync();const result=await health.getBackgroundHealth();if(!result.healthJson)return;applyBackgroundHealth(JSON.parse(result.healthJson));localStorage.setItem('diet-training-state',JSON.stringify(state));render();configureNativeAutoSync();}catch{}})();
 render();
 
+// Keep device adaptation and computer sync in the profile settings, not in daily views.
+renderHealthConnectCard=function(){$('#health-connect-card')?.remove();};
+function openSyncSettings(){
+  dialog('电脑同步',`<p class="settings-note">通过 Tailscale 同步电脑与手机的数据。保存地址后，记录会自动同步；顶部“同步”可立即执行一次。</p><label class="form-field">电脑服务器地址<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label>`,form=>{
+    const url=String(form.get('serverUrl')||'').trim().replace(/\/$/,'');
+    $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
+    if(url){scheduleSync();setSyncStatus('自动同步已开启');showToast('同步设置已保存');}
+    else {setSyncStatus('仅保存到本机');showToast('已关闭电脑同步');}
+  });
+}
+function openRedmiAdaptation(){
+  const available=Boolean(window.Capacitor?.Plugins?.HealthConnect),snapshot=state.healthConnectSnapshot;
+  dialog('红米手机适配',`<p class="settings-note">Android APK 通过 Health Connect 读取红米 / 小米运动健康、Mi Fitness 等已授权来源的数据；Safari 网页版无法直接读取系统健康数据。</p><div class="settings-list"><button type="button" ${available?'':'disabled'} id="health-connect-sync">${snapshot?'重新同步健康数据':'连接并同步健康数据'}</button></div><p class="muted">请先在红米手机安装并打开 Health Connect，再在小米运动健康或 Mi Fitness 中授权健康数据同步。</p>`,()=>{});
+  $('#entry-form .primary').textContent='关闭';
+}
+function openSettingsList(){
+  dialog('设置',`<p class="settings-note">阶段记录、设备适配和同步都集中在这里。</p><div class="settings-list"><button type="button" id="settings-redmi">📱 红米手机适配</button><button type="button" id="settings-sync">☁️ 电脑同步</button><button type="button" id="settings-stage-history">🗂️ 阶段历史</button><button type="button" id="settings-games">🎮 游戏记录</button><button type="button" id="settings-export">📥 下载备份</button><button type="button" id="settings-import">📤 上传备份</button></div>`,()=>{});
+  $('#entry-form .primary').textContent='关闭';
+  $('#settings-redmi').onclick=()=>{$('#entry-dialog').close();openRedmiAdaptation();};
+  $('#settings-sync').onclick=()=>{$('#entry-dialog').close();openSyncSettings();};
+  $('#settings-stage-history').onclick=()=>{$('#entry-dialog').close();openStageHistory();};
+  $('#settings-games').onclick=()=>{$('#entry-dialog').close();openView('games');};
+  $('#settings-export').onclick=()=>$('#export-button').click();
+  $('#settings-import').onclick=()=>$('#import-backup-file').click();
+}
+profileButton.onclick=openSettingsList;
+render();
+
 // Split the default diet into two gentler meals while preserving custom plans and past records.
 const splitLunchFoods=[
   {name:'即食燕麦',grams:60,kcal:393,protein:11,fiber:10.6},
@@ -746,4 +774,18 @@ $('#mark-rest-day').onclick=()=>{
   timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;delete state.activeWorkoutSession;
   state.workouts.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:today(),createdAt:new Date().toISOString(),restDay:true});save();render();showToast('已记录今日休息');
 };
+render();
+
+function openAppSettings(){
+  dialog('设置',`<p class="settings-note">阶段记录、设备适配和同步都集中在这里。</p><div class="settings-list"><button type="button" id="settings-redmi">📱 红米手机适配</button><button type="button" id="settings-sync">☁️ 电脑同步</button><button type="button" id="settings-stage-history">🗂️ 阶段历史</button><button type="button" id="settings-games">🎮 游戏记录</button><button type="button" id="settings-export">📥 下载备份</button><button type="button" id="settings-import">📤 上传备份</button></div>`,()=>{});
+  $('#entry-form .primary').textContent='关闭';
+  $('#settings-redmi').onclick=()=>{$('#entry-dialog').close();openRedmiAdaptation();};
+  $('#settings-sync').onclick=()=>{$('#entry-dialog').close();openSyncSettings();};
+  $('#settings-stage-history').onclick=()=>{$('#entry-dialog').close();openStageHistory();};
+  $('#settings-games').onclick=()=>{$('#entry-dialog').close();openView('games');};
+  $('#settings-export').onclick=()=>$('#export-button').click();
+  $('#settings-import').onclick=()=>$('#import-backup-file').click();
+}
+renderHealthConnectCard=function(){$('#health-connect-card')?.remove();};
+profileButton.onclick=openAppSettings;
 render();
