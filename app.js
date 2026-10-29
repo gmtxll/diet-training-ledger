@@ -719,13 +719,15 @@ function startStage(){
 function finishStage(){
   const active=state.activeStage;if(!active)return;
   if(!confirm('结束当前阶段并保存汇总？'))return;
-  const meals=stageItems('meals'),workouts=stageItems('workouts'),weights=stageItems('weights'),expenses=stageItems('expenses');
+  // Archive every record currently visible in the daily pages, including older
+  // records that were created before the stage feature existed.
+  const meals=[...state.meals],workouts=[...state.workouts],weights=[...state.weights],expenses=[...state.expenses];
   state.stages.unshift({id:active.id,startedAt:active.startedAt,endedAt:new Date().toISOString(),records:{meals,workouts,weights,expenses},summary:{meals:meals.length,workouts:workouts.length,weights:weights.length,expenses:spendingTotal(expenses)}});
   // Move completed-stage records out of the daily views; the immutable copy lives in stage history.
-  state.meals=state.meals.filter(item=>item.stageId!==active.id);
-  state.workouts=state.workouts.filter(item=>item.stageId!==active.id);
-  state.weights=state.weights.filter(item=>item.stageId!==active.id);
-  state.expenses=state.expenses.filter(item=>item.stageId!==active.id);
+  state.meals=[];
+  state.workouts=[];
+  state.weights=[];
+  state.expenses=[];
   delete state.activeStage;delete state.activeWorkoutSession;
   timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;
   save();render();drawTimer();showToast('阶段已保存，可以开始新的阶段');
