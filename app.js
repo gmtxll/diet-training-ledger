@@ -101,14 +101,14 @@ function setSyncStatus(message){$('#sync-status').textContent=message;}
 function scheduleSync(){clearTimeout(syncTimer);if(serverUrl())syncTimer=setTimeout(pushToServer,700);}
 async function pushToServer(){const url=serverUrl();if(!url)return;try{setSyncStatus('正在同步到电脑…');const response=await syncFetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
 async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await syncFetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{setSyncStatus('无法连接电脑服务器');}}
-async function syncNow(){
-  const button=$('#sync-now-button');
+async function syncNow(button=$('#sync-now-button')){
   if(!serverUrl()){showToast('请先在设置中填写电脑服务器地址');return;}
+  const buttonText=button?.textContent;
   if(button){button.disabled=true;button.classList.add('is-syncing');button.textContent='同步中';}
   setSyncStatus('正在同步…');
   await pushToServer();
   await pullFromServer();
-  if(button){button.disabled=false;button.classList.remove('is-syncing');button.textContent='同步';}
+  if(button){button.disabled=false;button.classList.remove('is-syncing');button.textContent=buttonText||'立即同步';}
   showToast($('#sync-status').textContent.includes('已从')?'同步完成':'同步失败，请检查 Tailscale 或服务器');
 }
 // When opened through Tailscale (or the LAN server), sync back to that same server by default.
@@ -178,7 +178,7 @@ if(syncCard){
   syncCard.hidden=true;
 }
 const profileStyles=document.createElement('style');
-profileStyles.textContent=`.profile-button{width:38px;height:38px;border:0;border-radius:50%;background:linear-gradient(145deg,#27643b,#5c9b6d);color:#fff;font:700 14px/1 inherit;box-shadow:0 3px 9px rgba(23,101,52,.22);cursor:pointer;flex:0 0 auto}.profile-button:active{transform:scale(.94)}.sync-now-button{height:36px;padding:0 11px;border:1px solid #cfe0d1;border-radius:11px;background:#fff;color:#1f6838;font:700 13px/1 inherit;cursor:pointer;box-shadow:0 2px 7px rgba(23,101,52,.08)}.sync-now-button:active{transform:scale(.96)}.sync-now-button.is-syncing{opacity:.65}.settings-note{margin:0 0 14px;color:#66736a;font-size:13px;line-height:1.55}.app-toast{position:fixed;z-index:20;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translate(-50%,12px);width:max-content;max-width:calc(100vw - 36px);padding:10px 14px;border-radius:12px;background:rgba(24,43,28,.92);color:#fff;font-size:13px;box-shadow:0 9px 24px rgba(18,35,22,.22);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.app-toast.show{opacity:1;transform:translate(-50%,0)}`;
+profileStyles.textContent=`.profile-button{width:38px;height:38px;border:0;border-radius:50%;background:linear-gradient(145deg,#27643b,#5c9b6d);color:#fff;font:700 14px/1 inherit;box-shadow:0 3px 9px rgba(23,101,52,.22);cursor:pointer;flex:0 0 auto}.profile-button:active{transform:scale(.94)}.settings-note{margin:0 0 14px;color:#66736a;font-size:13px;line-height:1.55}.app-toast{position:fixed;z-index:20;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translate(-50%,12px);width:max-content;max-width:calc(100vw - 36px);padding:10px 14px;border-radius:12px;background:rgba(24,43,28,.92);color:#fff;font-size:13px;box-shadow:0 9px 24px rgba(18,35,22,.22);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}.app-toast.show{opacity:1;transform:translate(-50%,0)}`;
 document.head.append(profileStyles);
 
 // Keep record deletion in the page where the record belongs.
@@ -437,12 +437,18 @@ render();
 // Keep device adaptation and computer sync in the profile settings, not in daily views.
 renderHealthConnectCard=function(){$('#health-connect-card')?.remove();};
 function openSyncSettings(){
-  dialog('电脑同步',`<p class="settings-note">通过 Tailscale 同步电脑与手机的数据。保存地址后，记录会自动同步；顶部“同步”可立即执行一次。</p><label class="form-field">电脑服务器地址<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label>`,form=>{
+  dialog('电脑同步',`<p class="settings-note">通过 Tailscale 同步电脑与手机的数据。保存地址后，记录会自动同步；也可在这里立即同步。</p><label class="form-field">电脑服务器地址<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label><button id="settings-sync-now" type="button" class="secondary full">立即同步</button>`,form=>{
     const url=String(form.get('serverUrl')||'').trim().replace(/\/$/,'');
     $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
     if(url){scheduleSync();setSyncStatus('自动同步已开启');showToast('同步设置已保存');}
     else {setSyncStatus('仅保存到本机');showToast('已关闭电脑同步');}
   });
+  $('#settings-sync-now').onclick=async()=>{
+    const input=$('#entry-form [name="serverUrl"]');
+    const url=String(input?.value||'').trim().replace(/\/$/,'');
+    $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
+    await syncNow($('#settings-sync-now'));
+  };
 }
 function openRedmiAdaptation(){
   const available=Boolean(window.Capacitor?.Plugins?.HealthConnect),snapshot=state.healthConnectSnapshot;
@@ -532,16 +538,6 @@ calendarButton.title='\u65e5\u5386';
 calendarButton.setAttribute('aria-label','\u67e5\u770b\u65e5\u5386\u8bb0\u5f55');
 calendarButton.textContent='\ud83d\uddd3\ufe0f';
 profileButton.before(calendarButton);
-const syncNowButton=document.createElement('button');
-syncNowButton.id='sync-now-button';
-syncNowButton.className='sync-now-button';
-syncNowButton.type='button';
-syncNowButton.title='立即同步';
-syncNowButton.setAttribute('aria-label','立即同步记录');
-syncNowButton.textContent='同步';
-calendarButton.before(syncNowButton);
-syncNowButton.onclick=syncNow;
-
 function dateRecordRows(date){
   const row=(icon,title,detail)=>`<div class="history-row"><div><p>${icon} ${title}</p><small>${detail}</small></div></div>`;
   const meals=state.meals.filter(x=>x.date===date).map(x=>row('\ud83c\udf7d\ufe0f',x.name||'\u996e\u98df',`${fmt(x.kcal||0)} kcal`));
