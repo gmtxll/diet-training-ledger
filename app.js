@@ -699,15 +699,11 @@ function renderStageCard(){
   $('#weight-history')?.closest('.section')?.setAttribute('hidden','');
   card.classList.toggle('is-active',Boolean(active));
   if(!active){
-    const latest=state.stages[0];
-    $('#stage-eyebrow').textContent='记录阶段';$('#stage-title').textContent='开始一个新阶段';
-    $('#stage-note').textContent=latest?`上一阶段已保存：${latest.summary.meals} 餐 · ${latest.summary.workouts} 次训练 · ${money(latest.summary.expenses)}`:'开始后，饮食、消费、体重与训练都会归入这一阶段。';
+    $('#stage-time').textContent='尚未开始阶段';
     button.textContent='开始';button.onclick=startStage;return;
   }
   const meals=stageItems('meals'),workouts=stageItems('workouts'),weights=stageItems('weights'),expenses=stageItems('expenses');
-  $('#stage-eyebrow').textContent=`阶段进行中 · ${new Date(active.startedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})} 开始`;
-  $('#stage-title').textContent='正在记录本阶段';
-  $('#stage-note').textContent=`饮食 ${meals.length} · 训练 ${workouts.length} · 体重 ${weights.length} · 消费 ${money(spendingTotal(expenses))}`;
+  $('#stage-time').textContent=`本阶段 ${new Date(active.startedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})} 开始`;
   button.textContent='结束并保存';button.onclick=finishStage;
   const setStageStatus=(selector,done,doneText,todoText)=>{const element=$(selector);element.classList.toggle('done',done);element.querySelector('small').textContent=done?doneText:todoText;};
   setStageStatus('#lunch-summary',meals.some(item=>item.name==='午餐'),'已记录','未记录');
