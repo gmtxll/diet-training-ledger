@@ -537,7 +537,7 @@ calendarButton.type='button';
 calendarButton.title='\u65e5\u5386';
 calendarButton.setAttribute('aria-label','\u67e5\u770b\u65e5\u5386\u8bb0\u5f55');
 calendarButton.textContent='\ud83d\uddd3\ufe0f';
-profileButton.before(calendarButton);
+$('#export-button').before(calendarButton);
 function dateRecordRows(date){
   const row=(icon,title,detail)=>`<div class="history-row"><div><p>${icon} ${title}</p><small>${detail}</small></div></div>`;
   const meals=state.meals.filter(x=>x.date===date).map(x=>row('\ud83c\udf7d\ufe0f',x.name||'\u996e\u98df',`${fmt(x.kcal||0)} kcal`));
@@ -787,4 +787,6 @@ function openAppSettings(){
 }
 renderHealthConnectCard=function(){$('#health-connect-card')?.remove();};
 profileButton.onclick=openAppSettings;
+$('#my-profile-slot').append(profileButton);
+$('#my-open-settings').onclick=openAppSettings;
 render();

@@ -51,10 +51,11 @@
       <section class="section" hidden><h3>最近明细</h3><div id="expense-history" class="history-list empty-state">暂无花销记录</div></section>
     </section>
     <section id="view-games" class="view" aria-labelledby="games-title"><div class="section-heading"><div><p class="eyebrow">游戏</p><h2 id="games-title">游戏记录</h2></div><button class="text-button" id="add-game-button">＋ 添加游戏</button></div><article class="card"><h3>当前游玩</h3><div id="playing-games" class="history-list empty-state">暂无正在玩的游戏</div></article><article class="card"><h3>已游玩</h3><div id="finished-games" class="history-list empty-state">暂无已游玩游戏</div></article><article class="card"><h3>全部记录</h3><div id="record-list" class="history-list empty-state">暂无记录</div></article></section>
+    <section id="view-me" class="view" aria-labelledby="me-title"><article class="card my-profile-card"><div id="my-profile-slot"></div><div><p class="eyebrow">个人中心</p><h2 id="me-title">我的</h2><p class="muted">设置、数据与历史记录</p></div></article><div class="settings-list my-menu"><button type="button" data-go="trends">⚖️ 身体数据</button><button type="button" data-go="expenses">🧾 消费记录</button><button type="button" id="my-open-settings">⚙️ 设置与同步</button></div></section>
   </main>
 
-  <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">训练</button><button data-view="trends">身体</button><button data-view="expenses">记账</button></nav>
+  <nav class="tab-bar" aria-label="主导航"><button class="active" data-view="home">首页</button><button data-view="food">饮食</button><button data-view="workout">运动</button><button data-view="me">我的</button></nav>
   <dialog id="entry-dialog"><form id="entry-form"><div class="dialog-header"><h2 id="dialog-title">添加记录</h2><button type="button" id="dialog-close" class="icon-button" aria-label="关闭">×</button></div><div id="dialog-fields"></div><div class="button-row"><button type="button" id="dialog-cancel" class="secondary">取消</button><button type="submit" class="primary">保存</button></div></form></dialog>
-  <script src="app.js?v=56"></script>
+  <script src="app.js?v=57"></script>
 </body>
 </html>

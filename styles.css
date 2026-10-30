@@ -107,6 +107,7 @@ h3 {
 }
 .stage-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:2px 0;color:#66736a;font-size:13px}.stage-card time{font-variant-numeric:tabular-nums}.stage-card .primary{flex:0 0 auto;min-width:72px;min-height:38px;padding:0 16px}.stage-card.is-active{color:#1f6838}
 .stage-detail-list{margin:0;padding-left:20px;color:#506055}.stage-detail-list li{padding:3px 0}
+.my-profile-card{display:flex;align-items:center;gap:13px;margin-bottom:14px}.my-profile-card h2{margin:1px 0 3px}.my-profile-card .muted{margin:0}.my-profile-card .profile-button{width:48px;height:48px;font-size:17px}.my-menu{margin:0}
 .action-card {
   display: flex;
   align-items: center;
