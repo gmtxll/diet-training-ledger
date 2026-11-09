@@ -1,5 +1,5 @@
-const CACHE = 'diet-training-shell-v58';
-const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=58','./manifest.webmanifest'];
+const CACHE = 'diet-training-shell-v59';
+const ASSETS = ['./','./index.html','./styles.css','./sync.css','./app.js?v=59','./manifest.webmanifest'];
 
 async function refreshAsset(cache, url){
   const response = await fetch(url, {cache:'reload'});
@@ -34,7 +34,10 @@ self.addEventListener('fetch', event => {
       return response;
     });
     if(cached){
-      event.waitUntil(refresh.catch(()=>{}));
+      // Safari requires waitUntil() to be called synchronously in the event
+      // handler. Calling it here (after an await) can reject the navigation
+      // and leave the installed web app on a blank screen.
+      refresh.catch(()=>{});
       return cached;
     }
     try{
