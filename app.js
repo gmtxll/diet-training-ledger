@@ -91,15 +91,15 @@ function updateDifficultyUI(){const level=difficultyLevel(),input=$('#difficulty
 function displayTarget(item){return item?.isRest?item.target:adjustedTarget(item?.target||'');}
 function drawTimer(){const s=timer.seconds, list=state.exercises||[], current=list[timer.exerciseIndex]||{name:'训练完成',target:'保存记录'};$('#timer-display').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;$('#timer-toggle').textContent=timer.running?'暂停':'开始';$('#timer-state').textContent=timer.running?'训练计时中':'准备开始';$('#exercise-name').textContent=`第 ${timer.exerciseIndex+1} 项：${current.name}`;$('#exercise-detail').textContent=`目标 ${displayTarget(current)} · 共 ${$('#rounds-input').value||3} 轮`;}
 $('#difficulty-input').onchange=e=>{state.difficultyLevel=Math.min(5,Math.max(1,Number(e.target.value)||3));updateDifficultyUI();drawTimer();renderExtras();save();};
-function startTimer(){if(timer.running)return;if(!state.activeStage){showToast('请先在首页开始一个阶段');return;}if(!state.activeWorkoutSession){state.activeWorkoutSession={startedAt:new Date().toISOString(),date:today(),planId:state.activeWorkoutPlan,stageId:state.activeStage.id};save();}timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
+function startTimer(){if(timer.running)return;if(!state.activeWorkoutSession){state.activeWorkoutSession={startedAt:new Date().toISOString(),date:today(),planId:state.activeWorkoutPlan};save();}timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{timer.seconds++;drawTimer();},1000);}
 $('#timer-toggle').onclick=()=>{if(timer.running){timer.running=false;clearInterval(timer.interval);}else startTimer();drawTimer();};$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();};$('#next-exercise').onclick=()=>{timer.exerciseIndex=(timer.exerciseIndex+1)%Math.max(1,(state.exercises||[]).length);timer.seconds=0;startTimer();drawTimer();};$('#complete-workout').onclick=()=>{const rounds=Math.max(1,Number($('#rounds-input').value)||3);state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});save();timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;drawTimer();render();};
 $('#export-button').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`饮食训练本-${today()}.json`;a.click();URL.revokeObjectURL(url);};
 let syncTimer;
 const syncFetch=(url,options={})=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2500);return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer));};
 function serverUrl(){return $('#server-url-input').value.trim().replace(/\/$/,'');}
 function setSyncStatus(message){$('#sync-status').textContent=message;}
-function scheduleSync(){clearTimeout(syncTimer);if(serverUrl())syncTimer=setTimeout(pushToServer,700);}
-async function pushToServer(){const url=serverUrl();if(!url)return;try{setSyncStatus('正在同步到电脑…');const response=await syncFetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('电脑服务器不可用；记录仍保存在本机');}}
+function scheduleSync(){clearTimeout(syncTimer);if(serverUrl()&&navigator.onLine)syncTimer=setTimeout(pushToServer,700);}
+async function pushToServer(){const url=serverUrl();if(!url||!navigator.onLine)return;try{setSyncStatus('正在同步到电脑…');const response=await syncFetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});if(!response.ok)throw new Error();localStorage.setItem('diet-training-server',url);setSyncStatus('已同步到电脑');}catch{setSyncStatus('服务器暂不可用；记录已保存在本机');}}
 async function pullFromServer(){const url=serverUrl();if(!url){setSyncStatus('请先填写电脑服务器地址');return;}try{setSyncStatus('正在从电脑读取…');const response=await syncFetch(`${url}/api/state`);if(!response.ok)throw new Error();const payload=await response.json();if(!payload.state||typeof payload.state!=='object')throw new Error();state=payload.state;localStorage.setItem('diet-training-state',JSON.stringify(state));localStorage.setItem('diet-training-server',url);render();setSyncStatus('已从电脑读取');}catch{setSyncStatus('无法连接电脑服务器');}}
 async function syncNow(button=$('#sync-now-button')){
   if(!serverUrl()){showToast('请先在设置中填写电脑服务器地址');return;}
@@ -121,7 +121,8 @@ $('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server'
 $('#push-server-button')?.remove();
 $('#pull-server-button')?.remove();
 // Keep every local change durable on the computer server, including a final save when the page closes.
-window.addEventListener('pagehide',()=>{const url=serverUrl();if(url)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
+window.addEventListener('pagehide',()=>{const url=serverUrl();if(url&&navigator.onLine)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
+window.addEventListener('online',()=>{if(serverUrl())pushToServer();});
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 // Versioned defaults: update only bundled plans, never historical records or custom plans.
 const PLAN_UPDATE_VERSION=4;
@@ -747,40 +748,35 @@ function openStageDetail(id){
   $('#entry-form .primary').textContent='关闭';
 }
 const baseStageHomeRender=renderHome;
-renderHome=function(){baseStageHomeRender();renderStageCard();};
+renderHome=function(){baseStageHomeRender();};
 $('#save-meal-button').onclick=()=>{
-  if(!requireActiveStage())return;
   const totals=calcMeal(),plan=state.mealPlans.find(item=>item.id===state.activeMealPlan);
-  state.meals.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:today(),createdAt:new Date().toISOString(),name:plan?.name||'饮食',...totals});save();render();
+  state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:plan?.name||'饮食',...totals});save();render();
 };
 $('#add-weight-button').onclick=()=>dialog('记录体重','<label class="form-field">体重（kg）<input name="value" type="number" min="20" max="350" step="0.1" required autofocus></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{
-  if(!requireActiveStage())return;
-  state.weights.push({id:crypto.randomUUID(),stageId:state.activeStage.id,createdAt:new Date().toISOString(),date:form.get('date'),value:Number(form.get('value'))});state.weights.sort((a,b)=>a.date.localeCompare(b.date));save();render();
+  state.weights.push({id:crypto.randomUUID(),createdAt:new Date().toISOString(),date:form.get('date'),value:Number(form.get('value'))});state.weights.sort((a,b)=>a.date.localeCompare(b.date));save();render();
 });
 $('#add-expense-button').onclick=()=>dialog('记录消费','<label class="form-field">项目<input name="name" required autofocus></label><label class="form-field">金额（元）<input name="amount" type="number" min="0.01" step="0.01" required></label><label class="form-field">日期<input name="date" type="date" value="'+today()+'" required></label>',form=>{
-  if(!requireActiveStage())return;
-  state.expenses.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,createdAt:new Date().toISOString(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();
+  state.expenses.unshift({id:crypto.randomUUID(),createdAt:new Date().toISOString(),name:form.get('name'),type:'expense',amount:Number(form.get('amount')),date:form.get('date')});save();render();
 });
 $('#complete-workout').onclick=()=>{
   const session=state.activeWorkoutSession;
-  if(!session||!requireActiveStage()){showToast('请先开始阶段与训练');return;}
+  if(!session){showToast('请先点击开始');return;}
   const rounds=Math.max(1,Number($('#rounds-input').value)||3);
-  state.workouts.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:session.date||today(),createdAt:new Date().toISOString(),startedAt:session.startedAt,endedAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});
-  delete state.activeWorkoutSession;timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;save();render();drawTimer();showToast('本次训练已保存到当前阶段');
+  state.workouts.unshift({id:crypto.randomUUID(),date:session.date||today(),createdAt:new Date().toISOString(),startedAt:session.startedAt,endedAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:timer.seconds});
+  delete state.activeWorkoutSession;timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;save();render();drawTimer();showToast('本次训练已保存');
 };
 $('#mark-rest-day').onclick=()=>{
-  if(!requireActiveStage())return;
   timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;delete state.activeWorkoutSession;
-  state.workouts.unshift({id:crypto.randomUUID(),stageId:state.activeStage.id,date:today(),createdAt:new Date().toISOString(),restDay:true});save();render();showToast('已记录今日休息');
+  state.workouts.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),restDay:true});save();render();showToast('已记录今日休息');
 };
 render();
 
 function openAppSettings(){
-  dialog('设置',`<p class="settings-note">阶段记录、设备适配和同步都集中在这里。</p><div class="settings-list"><button type="button" id="settings-redmi">📱 红米手机适配</button><button type="button" id="settings-sync">☁️ 电脑同步</button><button type="button" id="settings-stage-history">🗂️ 阶段历史</button><button type="button" id="settings-games">🎮 游戏记录</button><button type="button" id="settings-export">📥 下载备份</button><button type="button" id="settings-import">📤 上传备份</button></div>`,()=>{});
+  dialog('设置',`<p class="settings-note">数据默认保存在手机本地；联网后会自动上传到电脑服务器。</p><div class="settings-list"><button type="button" id="settings-redmi">📱 iQOO 健康同步</button><button type="button" id="settings-sync">☁️ 电脑同步</button><button type="button" id="settings-games">🎮 游戏记录</button><button type="button" id="settings-export">📥 下载备份</button><button type="button" id="settings-import">📤 上传备份</button></div>`,()=>{});
   $('#entry-form .primary').textContent='关闭';
   $('#settings-redmi').onclick=()=>{$('#entry-dialog').close();openRedmiAdaptation();};
   $('#settings-sync').onclick=()=>{$('#entry-dialog').close();openSyncSettings();};
-  $('#settings-stage-history').onclick=()=>{$('#entry-dialog').close();openStageHistory();};
   $('#settings-games').onclick=()=>{$('#entry-dialog').close();openView('games');};
   $('#settings-export').onclick=()=>$('#export-button').click();
   $('#settings-import').onclick=()=>$('#import-backup-file').click();
@@ -789,4 +785,44 @@ renderHealthConnectCard=function(){$('#health-connect-card')?.remove();};
 profileButton.onclick=openAppSettings;
 $('#my-profile-slot').append(profileButton);
 $('#my-open-settings').onclick=openAppSettings;
+
+// Android only: pull down on the page to sync iQOO / Health Connect data and
+// immediately upload the refreshed local state to the configured computer server.
+let healthRefreshInFlight=false;
+async function syncHealthFromPull(){
+  const health=window.Capacitor?.Plugins?.HealthConnect;
+  if(!health){showToast('健康同步仅在 Android APK 中可用');return;}
+  if(healthRefreshInFlight)return;
+  healthRefreshInFlight=true;
+  const indicator=$('#health-refresh-indicator');
+  indicator?.classList.add('is-loading');
+  try{
+    showToast('正在同步 Health Connect…');
+    let data;
+    try{data=await health.readLatest();}
+    catch{
+      const permission=await health.requestHealthPermissions();
+      if(!permission.granted)throw new Error('请在 Health Connect 中授权体重、步数、运动和热量数据');
+      data=await health.readLatest();
+    }
+    applyBackgroundHealth(data);
+    save();
+    render();
+    if(serverUrl()&&navigator.onLine)pushToServer();
+    showToast(serverUrl()&&navigator.onLine?'健康数据已保存，正在上传服务器':'健康数据已保存到本机');
+  }catch(error){showToast(error?.message||'健康同步失败，请检查 Health Connect 授权');}
+  finally{healthRefreshInFlight=false;indicator?.classList.remove('is-loading');}
+}
+const healthRefreshIndicator=document.createElement('div');
+healthRefreshIndicator.id='health-refresh-indicator';
+healthRefreshIndicator.textContent='↓ 下拉同步健康数据';
+document.body.append(healthRefreshIndicator);
+let pullStartY=0,pullDistance=0;
+document.addEventListener('touchstart',event=>{if(window.scrollY<=0&&event.touches.length===1)pullStartY=event.touches[0].clientY;},{passive:true});
+document.addEventListener('touchmove',event=>{
+  if(!pullStartY||healthRefreshInFlight)return;
+  pullDistance=Math.max(0,event.touches[0].clientY-pullStartY);
+  if(pullDistance>24){healthRefreshIndicator.classList.add('is-visible');healthRefreshIndicator.textContent=pullDistance>78?'松开同步健康数据':'↓ 下拉同步健康数据';}
+},{passive:true});
+document.addEventListener('touchend',()=>{const shouldSync=pullDistance>78&&window.scrollY<=0;pullStartY=0;pullDistance=0;healthRefreshIndicator.classList.remove('is-visible');if(shouldSync)syncHealthFromPull();},{passive:true});
 render();

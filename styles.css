@@ -108,6 +108,7 @@ h3 {
 .stage-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:2px 0;color:#66736a;font-size:13px}.stage-card time{font-variant-numeric:tabular-nums}.stage-card .primary{flex:0 0 auto;min-width:72px;min-height:38px;padding:0 16px}.stage-card.is-active{color:#1f6838}
 .stage-detail-list{margin:0;padding-left:20px;color:#506055}.stage-detail-list li{padding:3px 0}
 .my-profile-card{display:flex;align-items:center;gap:13px;margin-bottom:14px}.my-profile-card h2{margin:1px 0 3px}.my-profile-card .muted{margin:0}.my-profile-card .profile-button{width:48px;height:48px;font-size:17px}.my-menu{margin:0}
+#health-refresh-indicator{position:fixed;z-index:30;top:calc(env(safe-area-inset-top) + 8px);left:50%;padding:8px 12px;border-radius:999px;background:#1f6838;color:#fff;font-size:12px;font-weight:700;box-shadow:0 6px 18px rgba(15,75,35,.25);transform:translate(-50%,-56px);opacity:0;pointer-events:none;transition:transform .18s ease,opacity .18s ease}#health-refresh-indicator.is-visible,#health-refresh-indicator.is-loading{transform:translate(-50%,0);opacity:1}#health-refresh-indicator.is-loading::before{content:'↻ ';display:inline-block;animation:health-spin .8s linear infinite}@keyframes health-spin{to{transform:rotate(360deg)}}
 .action-card {
   display: flex;
   align-items: center;
