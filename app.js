@@ -48,7 +48,7 @@ state.draftFoods ||= clonePlanItems(latestFoods);
 state.difficultyLevel=Math.min(5,Math.max(1,Number(state.difficultyLevel)||3));
 let timer = {seconds:0, running:false, interval:null, exerciseIndex:0};
 function syncActivePlanItems(){const mealPlan=state.mealPlans?.find(plan=>plan.id===state.activeMealPlan),workoutPlan=state.workoutPlans?.find(plan=>plan.id===state.activeWorkoutPlan);if(mealPlan&&Array.isArray(state.draftFoods))mealPlan.items=clonePlanItems(state.draftFoods);if(workoutPlan&&Array.isArray(state.exercises))workoutPlan.items=clonePlanItems(state.exercises);}
-const save = () => { syncActivePlanItems();state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); scheduleSync(); configureNativeAutoSync(); };
+const save = () => { syncActivePlanItems();state.updatedAt=new Date().toISOString(); localStorage.setItem('diet-training-state', JSON.stringify(state)); localStorage.setItem('diet-training-backup-'+today(), JSON.stringify(state)); configureNativeAutoSync(); };
 const fmt = (n) => Number(n).toLocaleString('zh-CN',{maximumFractionDigits:1});
 const money = (n) => `¥${Number(n).toLocaleString('zh-CN',{maximumFractionDigits:2})}`;
 function calcMeal(items=state.draftFoods){return items.reduce((a,f)=>({kcal:a.kcal+f.grams*f.kcal/100,protein:a.protein+f.grams*f.protein/100,fiber:a.fiber+f.grams*f.fiber/100}),{kcal:0,protein:0,fiber:0});}
@@ -75,7 +75,6 @@ function openView(name){
   $(`#view-${name}`).classList.add('active');
   document.querySelector(`[data-view="${name}"]`)?.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(name==='trends')setTimeout(pullFromServer,0);
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>openView(b.dataset.go));
 $('#dialog-close').onclick=$('#dialog-cancel').onclick=()=>$('#entry-dialog').close();
@@ -121,8 +120,6 @@ $('#server-url-input').onchange=()=>{localStorage.setItem('diet-training-server'
 $('#push-server-button')?.remove();
 $('#pull-server-button')?.remove();
 // Keep every local change durable on the computer server, including a final save when the page closes.
-window.addEventListener('pagehide',()=>{const url=serverUrl();if(url&&navigator.onLine)fetch(`${url}/api/state`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state),keepalive:true}).catch(()=>{});});
-window.addEventListener('online',()=>{if(serverUrl())pushToServer();});
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 // Versioned defaults: update only bundled plans, never historical records or custom plans.
 const PLAN_UPDATE_VERSION=4;
@@ -167,7 +164,7 @@ profileButton.onclick=()=>dialog('设置',`<p class="settings-note">记录会自
   $('#server-url-input').value=url;
   localStorage.setItem('diet-training-server',url);
   configureNativeAutoSync();
-  if(url){scheduleSync();setSyncStatus('自动同步已开启');showToast('设置已保存，将自动同步');}
+  if(url){setSyncStatus('服务器地址已保存；请在首页下拉同步');showToast('服务器地址已保存');}
   else {setSyncStatus('仅保存到本机');showToast('设置已保存，记录仅保存在本机');}
 });
 const syncCard=$('#server-url-input')?.closest('.settings-card');
@@ -400,8 +397,9 @@ function renderHealthConnectCard(){
 }
 function configureNativeAutoSync(){
   const health=window.Capacitor?.Plugins?.HealthConnect;
-  const url=$('#server-url-input')?.value?.trim();
-  if(health&&url)health.configureAutoSync({serverUrl:url,stateJson:JSON.stringify(state)}).catch(()=>{});
+  // Health data is deliberately refreshed only by a pull gesture on Home.
+  // Cancel any older background task created by previous APK versions.
+  health?.disableAutoSync?.().catch(()=>{});
 }
 function applyBackgroundHealth(data){
   if(!data||typeof data!=='object')return;
@@ -434,8 +432,6 @@ document.addEventListener('click',async event=>{
   }catch(error){alert(error?.message||'Health Connect 同步失败，请检查授权和数据源。');}
   finally{button.disabled=false;}
 });
-// A background Android sync may have run while the app was closed. Bring those values into local storage on launch.
-(async()=>{try{const health=window.Capacitor?.Plugins?.HealthConnect;if(!health)return;configureNativeAutoSync();const result=await health.getBackgroundHealth();if(!result.healthJson)return;applyBackgroundHealth(JSON.parse(result.healthJson));localStorage.setItem('diet-training-state',JSON.stringify(state));render();configureNativeAutoSync();}catch{}})();
 render();
 
 // Keep device adaptation and computer sync in the profile settings, not in daily views.
@@ -444,7 +440,7 @@ function openSyncSettings(){
   dialog('电脑同步',`<p class="settings-note">通过 Tailscale 同步电脑与手机的数据。保存地址后，记录会自动同步；也可在这里立即同步。</p><label class="form-field">电脑服务器地址<input name="serverUrl" type="url" value="${serverUrl()}" placeholder="https://win-5i5fng50vt5.taila5a35b.ts.net"></label><button id="settings-sync-now" type="button" class="secondary full">立即同步</button>`,form=>{
     const url=String(form.get('serverUrl')||'').trim().replace(/\/$/,'');
     $('#server-url-input').value=url;localStorage.setItem('diet-training-server',url);configureNativeAutoSync();
-    if(url){scheduleSync();setSyncStatus('自动同步已开启');showToast('同步设置已保存');}
+    if(url){setSyncStatus('服务器地址已保存；请在首页下拉同步');showToast('同步设置已保存');}
     else {setSyncStatus('仅保存到本机');showToast('已关闭电脑同步');}
   });
   $('#settings-sync-now').onclick=async()=>{
@@ -816,31 +812,17 @@ async function syncHealthFromPull(){
   }catch(error){showToast(error?.message||'健康同步失败，请检查 Health Connect 授权');}
   finally{healthRefreshInFlight=false;indicator?.classList.remove('is-loading');}
 }
-async function syncHealthWeightAutomatically(){
-  const health=window.Capacitor?.Plugins?.HealthConnect;
-  if(!health||healthRefreshInFlight)return;
-  try{
-    // Read is immediate when permission already exists; do not show permission UI
-    // or block startup when the phone has not been configured yet.
-    const data=await health.readLatest();
-    if(!data||data.weightKg==null)return;
-    applyBackgroundHealth(data);
-    save();render();
-    if(serverUrl()&&navigator.onLine)pushToServer();
-  }catch{}
-}
 const healthRefreshIndicator=document.createElement('div');
 healthRefreshIndicator.id='health-refresh-indicator';
 healthRefreshIndicator.textContent='↓ 下拉同步健康数据';
 document.body.append(healthRefreshIndicator);
 let pullStartY=0,pullDistance=0;
-document.addEventListener('touchstart',event=>{if(window.scrollY<=0&&event.touches.length===1)pullStartY=event.touches[0].clientY;},{passive:true});
+const isHomeView=()=>$('#view-home')?.classList.contains('active');
+document.addEventListener('touchstart',event=>{if(isHomeView()&&window.scrollY<=0&&event.touches.length===1)pullStartY=event.touches[0].clientY;},{passive:true});
 document.addEventListener('touchmove',event=>{
   if(!pullStartY||healthRefreshInFlight)return;
   pullDistance=Math.max(0,event.touches[0].clientY-pullStartY);
   if(pullDistance>24){healthRefreshIndicator.classList.add('is-visible');healthRefreshIndicator.textContent=pullDistance>78?'松开同步健康数据':'↓ 下拉同步健康数据';}
 },{passive:true});
-document.addEventListener('touchend',()=>{const shouldSync=pullDistance>78&&window.scrollY<=0;pullStartY=0;pullDistance=0;healthRefreshIndicator.classList.remove('is-visible');if(shouldSync)syncHealthFromPull();},{passive:true});
-window.addEventListener('load',()=>setTimeout(syncHealthWeightAutomatically,180));
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncHealthWeightAutomatically();});
+document.addEventListener('touchend',()=>{const shouldSync=isHomeView()&&pullDistance>78&&window.scrollY<=0;pullStartY=0;pullDistance=0;healthRefreshIndicator.classList.remove('is-visible');if(shouldSync)syncHealthFromPull();},{passive:true});
 render();
