@@ -408,7 +408,10 @@ function applyBackgroundHealth(data){
   if(data.heightCm)state.height=Math.round(Number(data.heightCm)*10)/10;
   if(data.weightKg){
     const date=(data.weightTime||new Date().toISOString()).slice(0,10);
-    if(!state.weights.some(x=>x.date===date&&Math.abs(Number(x.value)-Number(data.weightKg))<0.01))state.weights.push({id:crypto.randomUUID(),date,value:Math.round(Number(data.weightKg)*10)/10,source:'Health Connect'});
+    const value=Math.round(Number(data.weightKg)*10)/10;
+    const existing=state.weights.find(x=>x.date===date&&x.source==='Health Connect');
+    if(existing)existing.value=value;
+    else if(!state.weights.some(x=>x.date===date&&Math.abs(Number(x.value)-value)<0.01))state.weights.push({id:crypto.randomUUID(),date,value,source:'Health Connect'});
     state.weights.sort((a,b)=>a.date.localeCompare(b.date));
   }
   state.healthConnectSnapshot={stepsToday:data.stepsToday||0,caloriesBurnedToday:data.caloriesBurnedToday||0,exerciseSessionsToday:data.exerciseSessionsToday||0,syncedAt:data.syncedAt||new Date().toISOString()};
@@ -813,6 +816,19 @@ async function syncHealthFromPull(){
   }catch(error){showToast(error?.message||'健康同步失败，请检查 Health Connect 授权');}
   finally{healthRefreshInFlight=false;indicator?.classList.remove('is-loading');}
 }
+async function syncHealthWeightAutomatically(){
+  const health=window.Capacitor?.Plugins?.HealthConnect;
+  if(!health||healthRefreshInFlight)return;
+  try{
+    // Read is immediate when permission already exists; do not show permission UI
+    // or block startup when the phone has not been configured yet.
+    const data=await health.readLatest();
+    if(!data||data.weightKg==null)return;
+    applyBackgroundHealth(data);
+    save();render();
+    if(serverUrl()&&navigator.onLine)pushToServer();
+  }catch{}
+}
 const healthRefreshIndicator=document.createElement('div');
 healthRefreshIndicator.id='health-refresh-indicator';
 healthRefreshIndicator.textContent='↓ 下拉同步健康数据';
@@ -825,4 +841,6 @@ document.addEventListener('touchmove',event=>{
   if(pullDistance>24){healthRefreshIndicator.classList.add('is-visible');healthRefreshIndicator.textContent=pullDistance>78?'松开同步健康数据':'↓ 下拉同步健康数据';}
 },{passive:true});
 document.addEventListener('touchend',()=>{const shouldSync=pullDistance>78&&window.scrollY<=0;pullStartY=0;pullDistance=0;healthRefreshIndicator.classList.remove('is-visible');if(shouldSync)syncHealthFromPull();},{passive:true});
+window.addEventListener('load',()=>setTimeout(syncHealthWeightAutomatically,180));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncHealthWeightAutomatically();});
 render();
