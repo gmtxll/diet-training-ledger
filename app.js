@@ -74,9 +74,11 @@ function openView(name){
   document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));
   $(`#view-${name}`).classList.add('active');
   document.querySelector(`[data-view="${name}"]`)?.classList.add('active');
+  document.body.dataset.view=name;
   window.scrollTo({top:0,behavior:'smooth'});
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>openView(b.dataset.view));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>openView(b.dataset.go));
+document.body.dataset.view='home';
 $('#dialog-close').onclick=$('#dialog-cancel').onclick=()=>$('#entry-dialog').close();
 $('#save-meal-button').onclick=()=>{const t=calcMeal();state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:'一餐方案',...t});save();render();};
 $('#add-food-button').onclick=()=>dialog('添加食材','<label class="form-field">名称<input name="name" required></label><label class="form-field">热量（kcal）<input name="kcal" type="number" min="0" required></label><label class="form-field">蛋白质（g）<input name="protein" type="number" min="0" value="0" required></label>',f=>{state.meals.unshift({id:crypto.randomUUID(),date:today(),createdAt:new Date().toISOString(),name:f.get('name'),kcal:Number(f.get('kcal')),protein:Number(f.get('protein'))});save();render();});
@@ -284,8 +286,10 @@ renderScopedRecords=function(){
     button.type='button';
     button.textContent='\u5220\u9664';
     button.dataset.deleteFood=index;
-    row.append(edit);
-    row.append(button);
+    const actions=document.createElement('div');
+    actions.className='item-actions';
+    actions.append(edit,button);
+    row.append(actions);
   });
   $$('#exercise-list [data-delete-exercise]').forEach(button=>{
     const index=button.dataset.deleteExercise;
@@ -788,10 +792,12 @@ $('#my-open-settings').onclick=openAppSettings;
 // Android only: pull down on the page to sync iQOO / Health Connect data and
 // immediately upload the refreshed local state to the configured computer server.
 let healthRefreshInFlight=false;
+let healthPullAvailable=true;
 async function syncHealthFromPull(){
   const health=window.Capacitor?.Plugins?.HealthConnect;
   if(!health){showToast('健康同步仅在 Android APK 中可用');return;}
-  if(healthRefreshInFlight)return;
+  if(healthRefreshInFlight||!healthPullAvailable)return;
+  healthPullAvailable=false;
   healthRefreshInFlight=true;
   const indicator=$('#health-refresh-indicator');
   indicator?.classList.add('is-loading');
@@ -818,11 +824,12 @@ healthRefreshIndicator.textContent='↓ 下拉同步健康数据';
 document.body.append(healthRefreshIndicator);
 let pullStartY=0,pullDistance=0;
 const isHomeView=()=>$('#view-home')?.classList.contains('active');
-document.addEventListener('touchstart',event=>{if(isHomeView()&&window.scrollY<=0&&event.touches.length===1)pullStartY=event.touches[0].clientY;},{passive:true});
+document.addEventListener('touchstart',event=>{if(healthPullAvailable&&isHomeView()&&window.scrollY<=0&&event.touches.length===1)pullStartY=event.touches[0].clientY;},{passive:true});
 document.addEventListener('touchmove',event=>{
   if(!pullStartY||healthRefreshInFlight)return;
   pullDistance=Math.max(0,event.touches[0].clientY-pullStartY);
   if(pullDistance>24){healthRefreshIndicator.classList.add('is-visible');healthRefreshIndicator.textContent=pullDistance>78?'松开同步健康数据':'↓ 下拉同步健康数据';}
 },{passive:true});
 document.addEventListener('touchend',()=>{const shouldSync=isHomeView()&&pullDistance>78&&window.scrollY<=0;pullStartY=0;pullDistance=0;healthRefreshIndicator.classList.remove('is-visible');if(shouldSync)syncHealthFromPull();},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')healthPullAvailable=true;});
 render();
