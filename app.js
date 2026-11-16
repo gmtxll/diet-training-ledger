@@ -124,14 +124,17 @@ $('#pull-server-button')?.remove();
 // Keep every local change durable on the computer server, including a final save when the page closes.
 state.games ||= []; state.savings ||= []; state.exercises ||= [{name:'深蹲',target:'25–30 次'},{name:'俯卧撑',target:'10–15 次'},{name:'平板支撑',target:'45–60 秒'},{name:'卷腹',target:'25–30 次'}]; state.mealPlans ||= [{id:'default-meal',name:'一餐方案',items:state.draftFoods}]; state.workoutPlans ||= [{id:'default-workout',name:'自重循环',items:state.exercises}]; state.activeMealPlan ||= 'default-meal'; state.activeWorkoutPlan ||= 'default-workout'; state.weights.forEach(x=>x.id ||= crypto.randomUUID());
 // Versioned defaults: update only bundled plans, never historical records or custom plans.
-const PLAN_UPDATE_VERSION=4;
+const PLAN_UPDATE_VERSION=5;
 if((state.planUpdateVersion||0)<PLAN_UPDATE_VERSION){
   let defaultMeal=state.mealPlans.find(x=>x.id==='default-meal');
   if(!defaultMeal){defaultMeal={id:'default-meal',name:'\u51cf\u8102\u57fa\u7840\u914d\u65b9',items:clonePlanItems(latestFoods)};state.mealPlans.unshift(defaultMeal);}
   else {defaultMeal.name='\u51cf\u8102\u57fa\u7840\u914d\u65b9';defaultMeal.items=clonePlanItems(latestFoods);}
   let defaultWorkout=state.workoutPlans.find(x=>x.id==='default-workout');
-  if(!defaultWorkout){defaultWorkout={id:'default-workout',name:'\u8179\u808c\u51cf\u8102\u5faa\u73af',items:clonePlanItems(latestExercises)};state.workoutPlans.unshift(defaultWorkout);}
-  else {defaultWorkout.name='\u8179\u808c\u51cf\u8102\u5faa\u73af';defaultWorkout.items=clonePlanItems(latestExercises);}
+  if(!defaultWorkout){defaultWorkout={id:'default-workout',name:'\u529b\u91cf\u5faa\u73af\uff08\u6bcf\u5468 3 \u6b21\uff09',items:clonePlanItems(latestExercises)};state.workoutPlans.unshift(defaultWorkout);}
+  else {defaultWorkout.name='\u529b\u91cf\u5faa\u73af\uff08\u6bcf\u5468 3 \u6b21\uff09';defaultWorkout.items=clonePlanItems(latestExercises);}
+  let cardioWorkout=state.workoutPlans.find(x=>x.id==='cardio-workout');
+  if(!cardioWorkout){cardioWorkout={id:'cardio-workout',name:'\u5feb\u8d70\uff0f\u9a91\u8f66\uff08\u6bcf\u5468 2 \u6b21\uff09',items:[{name:'\u5feb\u8d70\u6216\u9a91\u8f66',target:'30\u201345 \u5206\u949f'}]};state.workoutPlans.push(cardioWorkout);}
+  else {cardioWorkout.name='\u5feb\u8d70\uff0f\u9a91\u8f66\uff08\u6bcf\u5468 2 \u6b21\uff09';cardioWorkout.items=[{name:'\u5feb\u8d70\u6216\u9a91\u8f66',target:'30\u201345 \u5206\u949f'}];}
   if(state.activeMealPlan==='default-meal')state.draftFoods=defaultMeal.items;
   const activeWorkout=state.workoutPlans.find(x=>x.id===state.activeWorkoutPlan);
   if(activeWorkout){activeWorkout.items=clonePlanItems(latestExercises);state.exercises=activeWorkout.items;}
@@ -886,6 +889,29 @@ $('#complete-workout').onclick=()=>{
   delete state.activeWorkoutSession;timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;restTimerSeconds=null;workoutTotalSeconds=0;lastAnnouncedExercise=-1;save();render();drawWorkoutTimer();showToast('本次训练已保存');
 };
 drawWorkoutTimer();
+
+// Make the selected weekly plan obvious without adding another large card.
+const baseWorkoutPlanExtras=renderExtras;
+renderExtras=function(){
+  baseWorkoutPlanExtras();
+  const plan=state.workoutPlans?.find(item=>item.id===state.activeWorkoutPlan);
+  const title=$('#workout-title');
+  if(title&&plan)title.textContent=plan.name;
+};
+render();
+
+const weeklyWorkoutGuide=['周日休息','周一力量循环','周二快走／骑车','周三力量循环','周四快走／骑车','周五力量循环','周六休息'];
+function applyTodayWorkoutPlan(){
+  const weekday=new Date().getDay();
+  const planId=[1,3,5].includes(weekday)?'default-workout':[2,4].includes(weekday)?'cardio-workout':null;
+  if(!planId){showToast('今天安排休息；需要时可点击“今日休息”记录。');return;}
+  const plan=state.workoutPlans?.find(item=>item.id===planId);
+  if(!plan){showToast('方案正在准备，请重开应用后再试。');return;}
+  state.activeWorkoutPlan=planId;state.exercises=clonePlanItems(plan.items);save();render();showToast(`已切换到${plan.name}`);
+}
+const scheduleNote=$('#workout-week-schedule');
+if(scheduleNote)scheduleNote.textContent=`本周：周一/三/五力量 · 周二/四快走或骑车 30–45 分钟 · 周末休息。今天：${weeklyWorkoutGuide[new Date().getDay()]}`;
+$('#use-today-workout-plan').onclick=applyTodayWorkoutPlan;
 
 // Android only: pull down on the page to sync iQOO / Health Connect data and
 // immediately upload the refreshed local state to the configured computer server.
