@@ -789,6 +789,104 @@ profileButton.onclick=openAppSettings;
 $('#my-profile-slot').append(profileButton);
 $('#my-open-settings').onclick=openAppSettings;
 
+// Workout voice coach.  Native Android support is used when packaged as the APK,
+// while SpeechSynthesis remains a safe fallback for the web/PWA edition.
+const VoiceCoach=globalThis.Capacitor?.Plugins?.VoiceCoach;
+let voiceControlEnabled=false;
+let restTimerSeconds=null;
+let workoutTotalSeconds=0;
+let lastAnnouncedExercise=-1;
+const spoken=(text)=>{
+  if(VoiceCoach?.speak){VoiceCoach.speak({text}).catch(()=>{});return;}
+  if(!('speechSynthesis' in globalThis))return;
+  speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(text);utterance.lang='zh-CN';utterance.rate=1.05;speechSynthesis.speak(utterance);
+};
+const isRestExercise=(item)=>Boolean(item?.isRest);
+const restDuration=(item)=>Math.max(1,Number(String(item?.target||'').match(/\d+/)?.[0])||Number($('#rest-input')?.value)||45);
+function workoutPrompt(){
+  const item=(state.exercises||[])[timer.exerciseIndex];
+  if(!item)return '动作已完成，请点击结束并保存。';
+  if(isRestExercise(item))return `开始休息，${restDuration(item)} 秒后自动进入下一项。`;
+  return `开始第 ${timer.exerciseIndex+1} 项，${item.name}，目标 ${displayTarget(item)}，共 ${$('#rounds-input').value||3} 轮。完成后可以说，下一项。`;
+}
+function announceCurrent(force=false){
+  if(force||lastAnnouncedExercise!==timer.exerciseIndex){lastAnnouncedExercise=timer.exerciseIndex;spoken(workoutPrompt());}
+}
+function advanceWorkout(announce=true){
+  const list=state.exercises||[];
+  if(!list.length)return;
+  timer.exerciseIndex=(timer.exerciseIndex+1)%list.length;
+  timer.seconds=0;
+  restTimerSeconds=isRestExercise(list[timer.exerciseIndex])?restDuration(list[timer.exerciseIndex]):null;
+  if(announce)announceCurrent(true);
+  drawWorkoutTimer();
+}
+function drawWorkoutTimer(){
+  const item=(state.exercises||[])[timer.exerciseIndex]||{name:'训练完成',target:'保存记录'};
+  const isRest=isRestExercise(item);
+  const shown=isRest?(restTimerSeconds??restDuration(item)):timer.seconds;
+  $('#timer-display').textContent=`${String(Math.floor(shown/60)).padStart(2,'0')}:${String(shown%60).padStart(2,'0')}`;
+  $('#timer-toggle').textContent=timer.running?'暂停':'开始';
+  $('#timer-state').textContent=isRest?(timer.running?'休息倒计时':'休息暂停'):(timer.running?'训练计时中':'准备开始');
+  $('#exercise-name').textContent=`第 ${timer.exerciseIndex+1} 项：${item.name}`;
+  $('#exercise-detail').textContent=isRest?`休息 ${restDuration(item)} 秒 · 时间到自动下一项`:`目标 ${displayTarget(item)} · 共 ${$('#rounds-input').value||3} 轮`;
+}
+function startWorkoutTimer(announce=true){
+  if(!state.activeWorkoutSession){state.activeWorkoutSession={startedAt:new Date().toISOString(),date:today(),planId:state.activeWorkoutPlan};save();}
+  if(restTimerSeconds===null&&isRestExercise((state.exercises||[])[timer.exerciseIndex]))restTimerSeconds=restDuration((state.exercises||[])[timer.exerciseIndex]);
+  if(!timer.running){timer.running=true;clearInterval(timer.interval);timer.interval=setInterval(()=>{
+    workoutTotalSeconds++;
+    if(restTimerSeconds!==null){
+      restTimerSeconds--;
+      if(restTimerSeconds<=0){spoken('休息结束，进入下一项。');advanceWorkout(true);}
+    }else timer.seconds++;
+    drawWorkoutTimer();
+  },1000);}
+  if(announce)announceCurrent();
+  drawWorkoutTimer();
+}
+function pauseWorkoutTimer(){timer.running=false;clearInterval(timer.interval);drawWorkoutTimer();spoken('训练已暂停。');}
+function finishWorkoutByVoice(){if(timer.running)pauseWorkoutTimer();$('#complete-workout').click();}
+function runVoiceCommand(command){
+  const text=String(command||'').replace(/\s/g,'');
+  if(/下一项|下一个|继续下一/.test(text)){advanceWorkout(true);if(!timer.running)startWorkoutTimer(false);showToast('已进入下一项');return;}
+  if(/暂停|停一下|停止/.test(text)){pauseWorkoutTimer();return;}
+  if(/结束|完成训练|保存训练/.test(text)){finishWorkoutByVoice();return;}
+  if(/开始|继续|播放/.test(text)){startWorkoutTimer(true);return;}
+  spoken('可说，下一项、开始、暂停或结束训练。');showToast('可说：下一项、开始、暂停或结束训练');
+}
+function setVoiceButton(active){const button=$('#voice-control');if(!button)return;button.setAttribute('aria-pressed',String(active));button.textContent=active?'🎙 正在聆听':'🎙 语音控制';button.classList.toggle('active',active);}
+function startWebRecognition(){
+  const Recognition=globalThis.SpeechRecognition||globalThis.webkitSpeechRecognition;
+  if(!Recognition){showToast('此设备未提供语音识别，可继续使用播报和按钮');setVoiceButton(false);voiceControlEnabled=false;return;}
+  const recognition=new Recognition();recognition.lang='zh-CN';recognition.interimResults=false;recognition.maxAlternatives=1;
+  recognition.onresult=e=>runVoiceCommand(e.results[0][0].transcript);
+  recognition.onerror=()=>{if(voiceControlEnabled)setTimeout(startWebRecognition,500);};
+  recognition.onend=()=>{if(voiceControlEnabled)setTimeout(startWebRecognition,350);};
+  recognition.start();
+}
+function startVoiceControl(){
+  if(!voiceControlEnabled)return;
+  if(VoiceCoach?.startListening){VoiceCoach.startListening().catch(error=>{showToast(error?.message||'无法开启语音控制');voiceControlEnabled=false;setVoiceButton(false);});}
+  else startWebRecognition();
+}
+if(VoiceCoach?.addListener){
+  VoiceCoach.addListener('result',event=>{runVoiceCommand(event.text);if(voiceControlEnabled)setTimeout(startVoiceControl,350);});
+  VoiceCoach.addListener('error',()=>{if(voiceControlEnabled)setTimeout(startVoiceControl,650);});
+}
+$('#voice-control').onclick=()=>{voiceControlEnabled=!voiceControlEnabled;setVoiceButton(voiceControlEnabled);if(voiceControlEnabled){spoken('语音控制已开启。可说，下一项、开始、暂停或结束训练。');setTimeout(startVoiceControl,500);}else{VoiceCoach?.stopListening?.().catch(()=>{});spoken('语音控制已关闭。');}};
+$('#timer-toggle').onclick=()=>timer.running?pauseWorkoutTimer():startWorkoutTimer(true);
+$('#next-exercise').onclick=()=>{advanceWorkout(true);startWorkoutTimer(false);};
+$('#reset-timer').onclick=()=>{timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;restTimerSeconds=null;workoutTotalSeconds=0;lastAnnouncedExercise=-1;delete state.activeWorkoutSession;save();drawWorkoutTimer();showToast('当前训练已重置');};
+$('#complete-workout').onclick=()=>{
+  const session=state.activeWorkoutSession;if(!session){showToast('请先点击开始');return;}
+  const rounds=Math.max(1,Number($('#rounds-input').value)||3);
+  state.workouts.unshift({id:crypto.randomUUID(),date:session.date||today(),createdAt:new Date().toISOString(),startedAt:session.startedAt,endedAt:new Date().toISOString(),rounds,rest:Number($('#rest-input').value)||0,difficulty:difficultyLevel(),exercises:state.exercises.map(item=>({...item,target:displayTarget(item)})),duration:workoutTotalSeconds||timer.seconds});
+  delete state.activeWorkoutSession;timer.running=false;clearInterval(timer.interval);timer.seconds=0;timer.exerciseIndex=0;restTimerSeconds=null;workoutTotalSeconds=0;lastAnnouncedExercise=-1;save();render();drawWorkoutTimer();showToast('本次训练已保存');
+};
+drawWorkoutTimer();
+
 // Android only: pull down on the page to sync iQOO / Health Connect data and
 // immediately upload the refreshed local state to the configured computer server.
 let healthRefreshInFlight=false;
