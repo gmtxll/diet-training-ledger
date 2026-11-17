@@ -859,7 +859,7 @@ function runVoiceCommand(command){
   if(/开始|继续|播放/.test(text)){startWorkoutTimer(true);return;}
   spoken('可说，下一项、开始、暂停或结束训练。');showToast('可说：下一项、开始、暂停或结束训练');
 }
-function setVoiceButton(active){const button=$('#voice-control');if(!button)return;button.setAttribute('aria-pressed',String(active));button.textContent=active?'🎙 正在聆听':'🎙 语音控制';button.classList.toggle('active',active);}
+function setVoiceButton(active,listening=false){const button=$('#voice-control');if(!button)return;button.setAttribute('aria-pressed',String(active));button.textContent=active?(listening?'🎙 正在聆听':'🎙 正在启动…'):'🎙 语音控制';button.classList.toggle('active',active);}
 function startWebRecognition(){
   const Recognition=globalThis.SpeechRecognition||globalThis.webkitSpeechRecognition;
   if(!Recognition){showToast('此设备未提供语音识别，可继续使用播报和按钮');setVoiceButton(false);voiceControlEnabled=false;return;}
@@ -869,14 +869,21 @@ function startWebRecognition(){
   recognition.onend=()=>{if(voiceControlEnabled)setTimeout(startWebRecognition,350);};
   recognition.start();
 }
-function startVoiceControl(){
+async function startVoiceControl(){
   if(!voiceControlEnabled)return;
-  if(VoiceCoach?.startListening){VoiceCoach.startListening().catch(error=>{showToast(error?.message||'无法开启语音控制');voiceControlEnabled=false;setVoiceButton(false);});}
+  if(VoiceCoach?.startListening){
+    try{
+      const status=await VoiceCoach.status?.()||{available:true};
+      if(!status.available)throw new Error('此手机没有可用的语音识别服务；请安装或启用系统语音识别服务后重试');
+      await VoiceCoach.startListening();
+    }catch(error){showToast(error?.message||'无法开启语音控制');voiceControlEnabled=false;setVoiceButton(false);}
+  }
   else startWebRecognition();
 }
 if(VoiceCoach?.addListener){
   VoiceCoach.addListener('result',event=>{runVoiceCommand(event.text);if(voiceControlEnabled)setTimeout(startVoiceControl,350);});
-  VoiceCoach.addListener('error',()=>{if(voiceControlEnabled)setTimeout(startVoiceControl,650);});
+  VoiceCoach.addListener('listening',event=>{if(voiceControlEnabled)setVoiceButton(true,Boolean(event.active));});
+  VoiceCoach.addListener('error',event=>{showToast(event.message||'语音识别失败');if(voiceControlEnabled&&event.retryable)setTimeout(startVoiceControl,650);else if(!event.retryable){voiceControlEnabled=false;setVoiceButton(false);}});
 }
 $('#voice-control').onclick=()=>{voiceControlEnabled=!voiceControlEnabled;setVoiceButton(voiceControlEnabled);if(voiceControlEnabled){spoken('语音控制已开启。可说，下一项、开始、暂停或结束训练。');setTimeout(startVoiceControl,500);}else{VoiceCoach?.stopListening?.().catch(()=>{});spoken('语音控制已关闭。');}};
 $('#timer-toggle').onclick=()=>timer.running?pauseWorkoutTimer():startWorkoutTimer(true);

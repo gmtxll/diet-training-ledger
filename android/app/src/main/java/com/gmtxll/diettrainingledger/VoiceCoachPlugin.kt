@@ -2,6 +2,7 @@ package com.gmtxll.diettrainingledger
 
 import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -64,6 +65,18 @@ class VoiceCoachPlugin : Plugin(), TextToSpeech.OnInitListener {
     }
 
     @PluginMethod
+    fun status(call: PluginCall) {
+        val available = SpeechRecognizer.isRecognitionAvailable(context)
+        val onDevice = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+        call.resolve(
+            JSObject()
+                .put("available", available)
+                .put("onDeviceAvailable", onDevice)
+                .put("microphoneGranted", getPermissionState("microphone") == PermissionState.GRANTED)
+        )
+    }
+
+    @PluginMethod
     fun stopListening(call: PluginCall) {
         activity.runOnUiThread {
             recognizer?.cancel()
@@ -84,7 +97,14 @@ class VoiceCoachPlugin : Plugin(), TextToSpeech.OnInitListener {
         }
         activity.runOnUiThread {
             recognizer?.destroy()
-            recognizer = SpeechRecognizer.createSpeechRecognizer(context).apply {
+            recognizer = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
+                    SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+                } else SpeechRecognizer.createSpeechRecognizer(context)
+            } catch (error: Exception) {
+                call.reject("语音识别引擎启动失败：${error.message ?: "未知错误"}")
+                return@runOnUiThread
+            }.apply {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) { notifyListeners("listening", JSObject().put("active", true)) }
                     override fun onBeginningOfSpeech() {}
@@ -93,11 +113,24 @@ class VoiceCoachPlugin : Plugin(), TextToSpeech.OnInitListener {
                     override fun onEndOfSpeech() {}
                     override fun onError(error: Int) {
                         notifyListeners("listening", JSObject().put("active", false))
-                        notifyListeners("error", JSObject().put("message", "未听清，请再试一次"))
+                        val message = when (error) {
+                            SpeechRecognizer.ERROR_AUDIO -> "麦克风不可用，请检查麦克风权限或是否被其他应用占用"
+                            SpeechRecognizer.ERROR_CLIENT -> "语音识别已中断，请重新点击语音控制"
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "缺少麦克风权限，请在系统设置中允许"
+                            SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "语音识别服务需要网络，请检查网络或安装离线语音包"
+                            SpeechRecognizer.ERROR_NO_MATCH -> "没有识别到口令，请说“下一项”"
+                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "语音识别服务正忙，请稍后再试"
+                            SpeechRecognizer.ERROR_SERVER -> "语音识别服务暂不可用"
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "未检测到说话，请再试一次"
+                            else -> "语音识别失败（代码 $error）"
+                        }
+                        val retryable = error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                        notifyListeners("error", JSObject().put("message", message).put("retryable", retryable).put("code", error))
                     }
                     override fun onResults(results: Bundle?) {
                         val words = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-                        notifyListeners("result", JSObject().put("text", words))
+                        if (words.isBlank()) notifyListeners("error", JSObject().put("message", "没有识别到口令，请再试一次").put("retryable", true))
+                        else notifyListeners("result", JSObject().put("text", words))
                         notifyListeners("listening", JSObject().put("active", false))
                     }
                     override fun onPartialResults(partialResults: Bundle?) {}
